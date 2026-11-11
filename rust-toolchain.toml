@@ -1,0 +1,12 @@
+# The Rust toolchain, for rustup and mise alike (mise.toml reads it). The
+# host target comes with the toolchain; the release builds the static musl
+# binary, so its std is installed for either architecture; check:sync lints
+# the Cloud Files crate (Windows only) for Windows from any system.
+[toolchain]
+channel = "1.99.0"
+components = ["clippy", "llvm-tools", "rustfmt"]
+targets = [
+  "x86_64-unknown-linux-musl",
+  "aarch64-unknown-linux-musl",
+  "x86_64-pc-windows-msvc",
+]

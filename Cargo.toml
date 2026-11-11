@@ -1,0 +1,21 @@
+# The Rust packages: the server (packages/backend), and from M5 the desktop
+# app's sync engine and shell. One lockfile and one target directory; the
+# profiles live here (cargo reads them only from the workspace's root).
+[workspace]
+resolver = "3"
+members = [
+  "packages/backend",
+  "packages/e2e-crypto",
+  "packages/sync",
+  "packages/cloudfiles",
+  "packages/desktop/src-tauri",
+]
+
+# Smaller, faster release binaries; the release workflow and the image
+# both build with this profile.
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+[profile.dev.package.sha2]
+opt-level = 3

@@ -1,0 +1,200 @@
+{"name": "document.pdf", "expected": "Home/Bills/Electricity", "text": "Electricity invoice for February. Consumption 512 kWh. Amount due 1 240 NOK. Grid rent included."}
+{"name": "download.pdf", "expected": "Home/Bills/Water", "note": "water"}
+{"name": "Broadband invoice.pdf", "expected": "Home/Bills/Internet", "text": "Fiber broadband 500/500, monthly subscription for April. Amount 699 NOK."}
+{"name": "Scan 47.pdf", "expected": "Home/Mortgage", "text": "Notice of change in interest rate on your home loan from 4.9 % to 5.1 %."}
+{"name": "Scan 90.pdf", "expected": "Home/Insurance", "text": "Home contents and building insurance, renewal for the coming year. Premium 6 400 NOK."}
+{"name": "Plumber quote August.pdf", "expected": "Home/Repairs", "text": "Quote for replacing the bathroom pipes and the water heater. Labour and parts 18 500 NOK."}
+{"name": "document.pdf", "expected": "Home/Manuals", "text": "Instructions for use. Programs, detergent dosage, cleaning the filter, error codes E01 to E21."}
+{"name": "scan_9797.pdf", "expected": "Health/Doctor", "text": "Blood test results: haemoglobin, cholesterol, vitamin D. Reference ranges included. Requested by your GP."}
+{"name": "Dental invoice.pdf", "expected": "Health/Dentist"}
+{"name": "Prescription.pdf", "expected": "Health/Prescriptions", "text": "Electronic prescription: ibuprofen 400 mg, take one tablet up to three times daily."}
+{"name": "Vaccination certificate.pdf", "expected": "Health/Vaccinations", "text": "Certificate of vaccination: tick-borne encephalitis, dose 2. Next dose in 5 years."}
+{"name": "Account statement.pdf", "expected": "Money/Bank statements", "text": "Statement for your current account, June. Opening balance, transactions, closing balance."}
+{"name": "Tax return 2024 November.pdf", "expected": "Money/Taxes/2024", "text": "Tax return for the income year 2024. Wages, deductions, wealth. Deadline 30 April 2025."}
+{"name": "download.pdf", "expected": "Money/Taxes/2025", "text": "Tax assessment notice for the income year 2025. You will receive a refund of 3 200 NOK."}
+{"name": "Pension statement April.pdf", "expected": "Money/Pension", "text": "Your occupational pension savings, annual statement. Contributions and returns."}
+{"name": "Receipt fridge.pdf", "expected": "Money/Receipts", "text": "Receipt for a fridge-freezer, delivery and installation included. Warranty 5 years."}
+{"name": "IMG_4653.jpg", "expected": "Work/Contracts", "text": "Employment contract: position, salary, working hours, notice period of three months."}
+{"name": "Payslip.pdf", "expected": "Work/Payslips", "text": "Payslip for December. Gross salary, tax deducted, holiday pay basis, net paid."}
+{"name": "document.pdf", "expected": "Work/Training", "note": "training"}
+{"name": "download.pdf", "expected": "Car/Insurance", "text": "Motor insurance for registration EV 12345: comprehensive cover, bonus 75 %."}
+{"name": "Car service invoice May.pdf", "expected": "Car/Service", "text": "Periodic service at 90 000 km: oil change, brake check, new wiper blades."}
+{"name": "download.pdf", "expected": "Car/Registration", "note": "registration"}
+{"name": "Train ticket.pdf", "expected": "Travel/Tickets", "text": "Train ticket Oslo S to Trondheim S, carriage 4, seat 56."}
+{"name": "document.pdf", "expected": "Travel/Bookings", "text": "Booking confirmation: 3 nights in a double room, check-in from 15:00, free cancellation."}
+{"name": "document.pdf", "expected": "Kids/School", "text": "Invitation to the parent-teacher meeting for class 4B on Thursday at 18:00."}
+{"name": "Football club fees.pdf", "expected": "Kids/Activities", "text": "Membership and training fees for the under-11 football team, autumn season."}
+{"name": "Lasagne.pdf", "expected": "Recipes", "text": "Ingredients: minced beef, tomatoes, lasagne sheets, béchamel. Bake 45 minutes at 200 °C."}
+{"name": "IMG_2789.jpg", "expected": "Pets/Vet", "text": "Veterinary invoice: annual check-up and vaccination for the dog, deworming tablets."}
+{"name": "Passport.pdf", "expected": "Identity/Passports", "text": "Passport application receipt. Photo taken, collect at the police station within 3 months."}
+{"name": "Power invoice.pdf", "expected": "Home/Bills/Electricity", "text": "Your power bill for July: spot price plus surcharge. Total to pay 980 NOK."}
+{"name": "document.pdf", "expected": "Home/Bills/Water", "text": "Municipal water and sewage fees, quarter 3. Amount due 2 310 NOK."}
+{"name": "download.pdf", "expected": "Home/Bills/Internet", "text": "Fiber broadband 500/500, monthly subscription for July. Amount 699 NOK."}
+{"name": "IMG_7110.jpg", "expected": "Home/Mortgage", "text": "Annual mortgage statement. Remaining principal 2 140 000 NOK. Interest rate 5.1 %."}
+{"name": "Home insurance renewal December.pdf", "expected": "Home/Insurance", "text": "Home contents and building insurance, renewal for the coming year. Premium 6 400 NOK."}
+{"name": "Electrician invoice.pdf", "expected": "Home/Repairs", "text": "Invoice for new sockets in the kitchen and a fuse box inspection."}
+{"name": "Washing machine manual.pdf", "expected": "Home/Manuals", "text": "Instructions for use. Programs, detergent dosage, cleaning the filter, error codes E01 to E21."}
+{"name": "Referral.pdf", "expected": "Health/Doctor", "text": "Referral to a specialist in dermatology after a consultation with your general practitioner."}
+{"name": "Dental invoice.pdf", "expected": "Health/Dentist"}
+{"name": "Prescription July.pdf", "expected": "Health/Prescriptions", "text": "Electronic prescription: ibuprofen 400 mg, take one tablet up to three times daily."}
+{"name": "Vaccination certificate.pdf", "expected": "Health/Vaccinations", "text": "Certificate of vaccination: tick-borne encephalitis, dose 2. Next dose in 5 years."}
+{"name": "Account statement.pdf", "expected": "Money/Bank statements", "text": "Statement for your current account, February. Opening balance, transactions, closing balance."}
+{"name": "Scan 5.pdf", "expected": "Money/Taxes/2024", "text": "Tax return for the income year 2024. Wages, deductions, wealth. Deadline 30 April 2025."}
+{"name": "Tax assessment 2025 May.pdf", "expected": "Money/Taxes/2025", "text": "Tax assessment notice for the income year 2025. You will receive a refund of 3 200 NOK."}
+{"name": "document.pdf", "expected": "Money/Pension", "text": "Your occupational pension savings, annual statement. Contributions and returns."}
+{"name": "Receipt fridge.pdf", "expected": "Money/Receipts", "text": "Receipt for a fridge-freezer, delivery and installation included. Warranty 5 years."}
+{"name": "Employment contract.pdf", "expected": "Work/Contracts", "text": "Employment contract: position, salary, working hours, notice period of three months."}
+{"name": "scan_7483.pdf", "expected": "Work/Payslips", "text": "Payslip for February. Gross salary, tax deducted, holiday pay basis, net paid."}
+{"name": "Course certificate February.pdf", "expected": "Work/Training", "text": "Certificate of completion: project management course, 3 days, 24 hours."}
+{"name": "scan_8089.pdf", "expected": "Car/Insurance", "text": "Motor insurance for registration EV 12345: comprehensive cover, bonus 75 %."}
+{"name": "Car service invoice.pdf", "expected": "Car/Service", "text": "Periodic service at 90 000 km: oil change, brake check, new wiper blades."}
+{"name": "Scan 16.pdf", "expected": "Car/Registration", "text": "Vehicle registration certificate part 1, owner details, technical data."}
+{"name": "download.pdf", "expected": "Travel/Tickets", "text": "E-ticket: Oslo to Bergen, departure 07:15, seat 12A, booking reference XK7P2Q."}
+{"name": "Hotel booking.pdf", "expected": "Travel/Bookings", "text": "Booking confirmation: 3 nights in a double room, check-in from 15:00, free cancellation."}
+{"name": "Parent meeting.pdf", "expected": "Kids/School", "note": "from school", "text": "Invitation to the parent-teacher meeting for class 4B on Thursday at 18:00."}
+{"name": "Football club fees December.pdf", "expected": "Kids/Activities", "text": "Membership and training fees for the under-11 football team, autumn season."}
+{"name": "Lasagne.pdf", "expected": "Recipes"}
+{"name": "scan_3438.pdf", "expected": "Pets/Vet", "text": "Veterinary invoice: annual check-up and vaccination for the dog, deworming tablets."}
+{"name": "Passport.pdf", "expected": "Identity/Passports"}
+{"name": "download.pdf", "expected": "Home/Bills/Electricity", "text": "Electricity invoice for December. Consumption 512 kWh. Amount due 1 240 NOK. Grid rent included."}
+{"name": "Water and sewage.pdf", "expected": "Home/Bills/Water", "text": "Municipal water and sewage fees, quarter 3. Amount due 2 310 NOK."}
+{"name": "document.pdf", "expected": "Home/Bills/Internet", "text": "Fiber broadband 500/500, monthly subscription for June. Amount 699 NOK."}
+{"name": "Mortgage statement.pdf", "expected": "Home/Mortgage", "text": "Annual mortgage statement. Remaining principal 2 140 000 NOK. Interest rate 5.1 %."}
+{"name": "Home insurance renewal.pdf", "expected": "Home/Insurance", "text": "Home contents and building insurance, renewal for the coming year. Premium 6 400 NOK."}
+{"name": "Electrician invoice.pdf", "expected": "Home/Repairs", "text": "Invoice for new sockets in the kitchen and a fuse box inspection."}
+{"name": "Scan 28.pdf", "expected": "Home/Manuals", "text": "Instructions for use. Programs, detergent dosage, cleaning the filter, error codes E01 to E21."}
+{"name": "Lab results June.pdf", "expected": "Health/Doctor", "text": "Blood test results: haemoglobin, cholesterol, vitamin D. Reference ranges included. Requested by your GP."}
+{"name": "Dental invoice.pdf", "expected": "Health/Dentist", "text": "Dental check-up and cleaning, two X-rays. Amount 1 450 NOK."}
+{"name": "scan_5780.pdf", "expected": "Health/Prescriptions", "note": "prescriptions"}
+{"name": "download.pdf", "expected": "Health/Vaccinations", "text": "Certificate of vaccination: tick-borne encephalitis, dose 2. Next dose in 5 years."}
+{"name": "scan_7389.pdf", "expected": "Money/Bank statements", "text": "Statement for your current account, March. Opening balance, transactions, closing balance."}
+{"name": "scan_1230.pdf", "expected": "Money/Taxes/2024", "text": "Tax return for the income year 2024. Wages, deductions, wealth. Deadline 30 April 2025."}
+{"name": "Advance tax card 2025 August.pdf", "expected": "Money/Taxes/2025", "text": "Your tax deduction card for 2025: table 7100, percentage 38 %."}
+{"name": "Pension statement November.pdf", "expected": "Money/Pension", "text": "Your occupational pension savings, annual statement. Contributions and returns."}
+{"name": "scan_8944.pdf", "expected": "Money/Receipts", "text": "Receipt for a fridge-freezer, delivery and installation included. Warranty 5 years."}
+{"name": "Employment contract.pdf", "expected": "Work/Contracts", "text": "Employment contract: position, salary, working hours, notice period of three months."}
+{"name": "Scan 98.pdf", "expected": "Work/Payslips", "text": "Payslip for December. Gross salary, tax deducted, holiday pay basis, net paid."}
+{"name": "Course certificate April.pdf", "expected": "Work/Training", "text": "Certificate of completion: project management course, 3 days, 24 hours."}
+{"name": "Car insurance.pdf", "expected": "Car/Insurance", "text": "Motor insurance for registration EV 12345: comprehensive cover, bonus 75 %."}
+{"name": "Car service invoice.pdf", "expected": "Car/Service"}
+{"name": "Scan 68.pdf", "expected": "Car/Registration", "text": "Vehicle registration certificate part 1, owner details, technical data."}
+{"name": "Train ticket.pdf", "expected": "Travel/Tickets", "text": "Train ticket Oslo S to Trondheim S, carriage 4, seat 56."}
+{"name": "Hotel booking June.pdf", "expected": "Travel/Bookings", "text": "Booking confirmation: 3 nights in a double room, check-in from 15:00, free cancellation."}
+{"name": "School report.pdf", "expected": "Kids/School"}
+{"name": "Scan 72.pdf", "expected": "Kids/Activities", "text": "Membership and training fees for the under-11 football team, autumn season."}
+{"name": "Lasagne.pdf", "expected": "Recipes", "note": "recipe to keep"}
+{"name": "scan_0302.pdf", "expected": "Pets/Vet", "text": "Veterinary invoice: annual check-up and vaccination for the dog, deworming tablets."}
+{"name": "Passport.pdf", "expected": "Identity/Passports", "text": "Passport application receipt. Photo taken, collect at the police station within 3 months."}
+{"name": "Scan 65.pdf", "expected": "Home/Bills/Electricity", "note": "electricity"}
+{"name": "download.pdf", "expected": "Home/Bills/Water", "text": "Municipal water and sewage fees, quarter 3. Amount due 2 310 NOK."}
+{"name": "Broadband invoice.pdf", "expected": "Home/Bills/Internet", "text": "Fiber broadband 500/500, monthly subscription for January. Amount 699 NOK."}
+{"name": "Loan terms change.pdf", "expected": "Home/Mortgage", "text": "Notice of change in interest rate on your home loan from 4.9 % to 5.1 %."}
+{"name": "Home insurance renewal.pdf", "expected": "Home/Insurance", "text": "Home contents and building insurance, renewal for the coming year. Premium 6 400 NOK."}
+{"name": "download.pdf", "expected": "Home/Repairs", "text": "Quote for replacing the bathroom pipes and the water heater. Labour and parts 18 500 NOK."}
+{"name": "Scan 65.pdf", "expected": "Home/Manuals", "text": "Instructions for use. Programs, detergent dosage, cleaning the filter, error codes E01 to E21."}
+{"name": "IMG_1149.jpg", "expected": "Health/Doctor", "text": "Referral to a specialist in dermatology after a consultation with your general practitioner."}
+{"name": "Dental treatment plan April.pdf", "expected": "Health/Dentist", "text": "Treatment plan: one filling, one crown on tooth 36. Estimated cost."}
+{"name": "Prescription.pdf", "expected": "Health/Prescriptions", "text": "Electronic prescription: ibuprofen 400 mg, take one tablet up to three times daily."}
+{"name": "Vaccination certificate.pdf", "expected": "Health/Vaccinations", "text": "Certificate of vaccination: tick-borne encephalitis, dose 2. Next dose in 5 years."}
+{"name": "Account statement.pdf", "expected": "Money/Bank statements", "text": "Statement for your current account, November. Opening balance, transactions, closing balance."}
+{"name": "Tax return 2024.pdf", "expected": "Money/Taxes/2024"}
+{"name": "document.pdf", "expected": "Money/Taxes/2025", "text": "Tax assessment notice for the income year 2025. You will receive a refund of 3 200 NOK."}
+{"name": "scan_2475.pdf", "expected": "Money/Pension", "text": "Your occupational pension savings, annual statement. Contributions and returns."}
+{"name": "Receipt headphones.pdf", "expected": "Money/Receipts", "text": "Receipt: wireless headphones, 2 year warranty. Paid by card 2 499 NOK."}
+{"name": "Employment contract.pdf", "expected": "Work/Contracts", "text": "Employment contract: position, salary, working hours, notice period of three months."}
+{"name": "Payslip.pdf", "expected": "Work/Payslips", "text": "Payslip for March. Gross salary, tax deducted, holiday pay basis, net paid."}
+{"name": "scan_7885.pdf", "expected": "Work/Training", "text": "Certificate of completion: project management course, 3 days, 24 hours."}
+{"name": "Car insurance.pdf", "expected": "Car/Insurance", "text": "Motor insurance for registration EV 12345: comprehensive cover, bonus 75 %."}
+{"name": "Car service invoice.pdf", "expected": "Car/Service", "note": "car stuff"}
+{"name": "Scan 30.pdf", "expected": "Car/Registration", "note": "registration"}
+{"name": "Train ticket.pdf", "expected": "Travel/Tickets", "text": "Train ticket Oslo S to Trondheim S, carriage 4, seat 56."}
+{"name": "Hotel booking May.pdf", "expected": "Travel/Bookings", "text": "Booking confirmation: 3 nights in a double room, check-in from 15:00, free cancellation."}
+{"name": "Scan 84.pdf", "expected": "Kids/School", "text": "Report card for the spring term: Norwegian, mathematics, English, science."}
+{"name": "Football club fees May.pdf", "expected": "Kids/Activities", "text": "Membership and training fees for the under-11 football team, autumn season."}
+{"name": "Lasagne.pdf", "expected": "Recipes", "text": "Ingredients: minced beef, tomatoes, lasagne sheets, béchamel. Bake 45 minutes at 200 °C."}
+{"name": "download.pdf", "expected": "Pets/Vet", "text": "Veterinary invoice: annual check-up and vaccination for the dog, deworming tablets."}
+{"name": "Passport May.pdf", "expected": "Identity/Passports", "text": "Passport application receipt. Photo taken, collect at the police station within 3 months."}
+{"name": "Power invoice.pdf", "expected": "Home/Bills/Electricity", "text": "Your power bill for January: spot price plus surcharge. Total to pay 980 NOK."}
+{"name": "Water and sewage.pdf", "expected": "Home/Bills/Water", "text": "Municipal water and sewage fees, quarter 3. Amount due 2 310 NOK."}
+{"name": "download.pdf", "expected": "Home/Bills/Internet", "text": "Fiber broadband 500/500, monthly subscription for July. Amount 699 NOK."}
+{"name": "Mortgage statement.pdf", "expected": "Home/Mortgage", "text": "Annual mortgage statement. Remaining principal 2 140 000 NOK. Interest rate 5.1 %."}
+{"name": "scan_5681.pdf", "expected": "Home/Insurance", "text": "Home contents and building insurance, renewal for the coming year. Premium 6 400 NOK."}
+{"name": "Plumber quote December.pdf", "expected": "Home/Repairs", "text": "Quote for replacing the bathroom pipes and the water heater. Labour and parts 18 500 NOK."}
+{"name": "Washing machine manual.pdf", "expected": "Home/Manuals"}
+{"name": "Referral.pdf", "expected": "Health/Doctor", "text": "Referral to a specialist in dermatology after a consultation with your general practitioner."}
+{"name": "scan_2767.pdf", "expected": "Health/Dentist", "note": "from the dentist", "text": "Treatment plan: one filling, one crown on tooth 36. Estimated cost."}
+{"name": "Scan 13.pdf", "expected": "Health/Prescriptions", "text": "Electronic prescription: ibuprofen 400 mg, take one tablet up to three times daily."}
+{"name": "Vaccination certificate.pdf", "expected": "Health/Vaccinations", "text": "Certificate of vaccination: tick-borne encephalitis, dose 2. Next dose in 5 years."}
+{"name": "Account statement.pdf", "expected": "Money/Bank statements", "text": "Statement for your current account, January. Opening balance, transactions, closing balance."}
+{"name": "Tax return 2024.pdf", "expected": "Money/Taxes/2024", "text": "Tax return for the income year 2024. Wages, deductions, wealth. Deadline 30 April 2025."}
+{"name": "Tax assessment 2025.pdf", "expected": "Money/Taxes/2025", "text": "Tax assessment notice for the income year 2025. You will receive a refund of 3 200 NOK."}
+{"name": "IMG_5803.jpg", "expected": "Money/Pension", "note": "pension"}
+{"name": "scan_1846.pdf", "expected": "Money/Receipts", "text": "Receipt: wireless headphones, 2 year warranty. Paid by card 2 499 NOK."}
+{"name": "Employment contract August.pdf", "expected": "Work/Contracts", "text": "Employment contract: position, salary, working hours, notice period of three months."}
+{"name": "Payslip.pdf", "expected": "Work/Payslips", "text": "Payslip for April. Gross salary, tax deducted, holiday pay basis, net paid."}
+{"name": "Course certificate December.pdf", "expected": "Work/Training", "text": "Certificate of completion: project management course, 3 days, 24 hours."}
+{"name": "Car insurance November.pdf", "expected": "Car/Insurance", "text": "Motor insurance for registration EV 12345: comprehensive cover, bonus 75 %."}
+{"name": "Car service invoice.pdf", "expected": "Car/Service", "note": "car stuff", "text": "Periodic service at 90 000 km: oil change, brake check, new wiper blades."}
+{"name": "download.pdf", "expected": "Car/Registration", "text": "Vehicle registration certificate part 1, owner details, technical data."}
+{"name": "IMG_8281.jpg", "expected": "Travel/Tickets", "text": "E-ticket: Oslo to Bergen, departure 07:15, seat 12A, booking reference XK7P2Q."}
+{"name": "Scan 14.pdf", "expected": "Travel/Bookings", "text": "Booking confirmation: 3 nights in a double room, check-in from 15:00, free cancellation."}
+{"name": "IMG_7677.jpg", "expected": "Kids/School", "text": "Invitation to the parent-teacher meeting for class 4B on Thursday at 18:00."}
+{"name": "Scan 33.pdf", "expected": "Kids/Activities", "text": "Membership and training fees for the under-11 football team, autumn season."}
+{"name": "document.pdf", "expected": "Recipes", "text": "Dough: flour, milk, yeast, butter, cardamom. Filling: butter, sugar, cinnamon."}
+{"name": "download.pdf", "expected": "Pets/Vet", "text": "Veterinary invoice: annual check-up and vaccination for the dog, deworming tablets."}
+{"name": "Passport.pdf", "expected": "Identity/Passports"}
+{"name": "Electricity bill.pdf", "expected": "Home/Bills/Electricity", "note": "power bill", "text": "Electricity invoice for March. Consumption 512 kWh. Amount due 1 240 NOK. Grid rent included."}
+{"name": "Water and sewage June.pdf", "expected": "Home/Bills/Water", "text": "Municipal water and sewage fees, quarter 3. Amount due 2 310 NOK."}
+{"name": "Broadband invoice March.pdf", "expected": "Home/Bills/Internet", "text": "Fiber broadband 500/500, monthly subscription for August. Amount 699 NOK."}
+{"name": "Loan terms change.pdf", "expected": "Home/Mortgage", "text": "Notice of change in interest rate on your home loan from 4.9 % to 5.1 %."}
+{"name": "Home insurance renewal.pdf", "expected": "Home/Insurance", "text": "Home contents and building insurance, renewal for the coming year. Premium 6 400 NOK."}
+{"name": "document.pdf", "expected": "Home/Repairs", "text": "Invoice for new sockets in the kitchen and a fuse box inspection."}
+{"name": "Washing machine manual.pdf", "expected": "Home/Manuals"}
+{"name": "Referral.pdf", "expected": "Health/Doctor", "text": "Referral to a specialist in dermatology after a consultation with your general practitioner."}
+{"name": "Dental treatment plan.pdf", "expected": "Health/Dentist"}
+{"name": "document.pdf", "expected": "Health/Prescriptions", "text": "Electronic prescription: ibuprofen 400 mg, take one tablet up to three times daily."}
+{"name": "scan_9172.pdf", "expected": "Health/Vaccinations", "text": "Certificate of vaccination: tick-borne encephalitis, dose 2. Next dose in 5 years."}
+{"name": "scan_8469.pdf", "expected": "Money/Bank statements", "text": "Statement for your current account, January. Opening balance, transactions, closing balance."}
+{"name": "Tax return 2024.pdf", "expected": "Money/Taxes/2024"}
+{"name": "document.pdf", "expected": "Money/Taxes/2025", "text": "Your tax deduction card for 2025: table 7100, percentage 38 %."}
+{"name": "Pension statement.pdf", "expected": "Money/Pension", "text": "Your occupational pension savings, annual statement. Contributions and returns."}
+{"name": "Receipt fridge.pdf", "expected": "Money/Receipts", "text": "Receipt for a fridge-freezer, delivery and installation included. Warranty 5 years."}
+{"name": "scan_0224.pdf", "expected": "Work/Contracts", "text": "Employment contract: position, salary, working hours, notice period of three months."}
+{"name": "Scan 29.pdf", "expected": "Work/Payslips", "text": "Payslip for March. Gross salary, tax deducted, holiday pay basis, net paid."}
+{"name": "Course certificate.pdf", "expected": "Work/Training", "text": "Certificate of completion: project management course, 3 days, 24 hours."}
+{"name": "download.pdf", "expected": "Car/Insurance", "text": "Motor insurance for registration EV 12345: comprehensive cover, bonus 75 %."}
+{"name": "Car service invoice August.pdf", "expected": "Car/Service"}
+{"name": "Vehicle registration September.pdf", "expected": "Car/Registration", "text": "Vehicle registration certificate part 1, owner details, technical data."}
+{"name": "download.pdf", "expected": "Travel/Tickets", "text": "E-ticket: Oslo to Bergen, departure 07:15, seat 12A, booking reference XK7P2Q."}
+{"name": "Hotel booking.pdf", "expected": "Travel/Bookings", "text": "Booking confirmation: 3 nights in a double room, check-in from 15:00, free cancellation."}
+{"name": "Parent meeting.pdf", "expected": "Kids/School", "note": "from school", "text": "Invitation to the parent-teacher meeting for class 4B on Thursday at 18:00."}
+{"name": "Football club fees September.pdf", "expected": "Kids/Activities", "text": "Membership and training fees for the under-11 football team, autumn season."}
+{"name": "scan_7251.pdf", "expected": "Recipes", "note": "recipe to keep", "text": "Ingredients: minced beef, tomatoes, lasagne sheets, béchamel. Bake 45 minutes at 200 °C."}
+{"name": "Scan 5.pdf", "expected": "Pets/Vet", "text": "Veterinary invoice: annual check-up and vaccination for the dog, deworming tablets."}
+{"name": "IMG_9323.jpg", "expected": "Identity/Passports", "text": "Passport application receipt. Photo taken, collect at the police station within 3 months."}
+{"name": "Electricity bill.pdf", "expected": "Home/Bills/Electricity", "text": "Electricity invoice for September. Consumption 512 kWh. Amount due 1 240 NOK. Grid rent included."}
+{"name": "document.pdf", "expected": "Home/Bills/Water", "text": "Municipal water and sewage fees, quarter 3. Amount due 2 310 NOK."}
+{"name": "Broadband invoice.pdf", "expected": "Home/Bills/Internet", "text": "Fiber broadband 500/500, monthly subscription for April. Amount 699 NOK."}
+{"name": "Loan terms change.pdf", "expected": "Home/Mortgage", "text": "Notice of change in interest rate on your home loan from 4.9 % to 5.1 %."}
+{"name": "Home insurance renewal September.pdf", "expected": "Home/Insurance", "text": "Home contents and building insurance, renewal for the coming year. Premium 6 400 NOK."}
+{"name": "Plumber quote May.pdf", "expected": "Home/Repairs", "text": "Quote for replacing the bathroom pipes and the water heater. Labour and parts 18 500 NOK."}
+{"name": "Washing machine manual.pdf", "expected": "Home/Manuals", "text": "Instructions for use. Programs, detergent dosage, cleaning the filter, error codes E01 to E21."}
+{"name": "download.pdf", "expected": "Health/Doctor", "text": "Referral to a specialist in dermatology after a consultation with your general practitioner."}
+{"name": "Dental invoice.pdf", "expected": "Health/Dentist", "note": "from the dentist", "text": "Dental check-up and cleaning, two X-rays. Amount 1 450 NOK."}
+{"name": "scan_6469.pdf", "expected": "Health/Prescriptions", "text": "Electronic prescription: ibuprofen 400 mg, take one tablet up to three times daily."}
+{"name": "document.pdf", "expected": "Health/Vaccinations", "text": "Certificate of vaccination: tick-borne encephalitis, dose 2. Next dose in 5 years."}
+{"name": "download.pdf", "expected": "Money/Bank statements", "text": "Statement for your current account, September. Opening balance, transactions, closing balance."}
+{"name": "document.pdf", "expected": "Money/Taxes/2024", "text": "Tax return for the income year 2024. Wages, deductions, wealth. Deadline 30 April 2025."}
+{"name": "Tax assessment 2025.pdf", "expected": "Money/Taxes/2025", "text": "Tax assessment notice for the income year 2025. You will receive a refund of 3 200 NOK."}
+{"name": "scan_7621.pdf", "expected": "Money/Pension", "note": "pension"}
+{"name": "Receipt fridge.pdf", "expected": "Money/Receipts", "note": "receipt, keep for warranty", "text": "Receipt for a fridge-freezer, delivery and installation included. Warranty 5 years."}
+{"name": "Employment contract.pdf", "expected": "Work/Contracts"}
+{"name": "IMG_4673.jpg", "expected": "Work/Payslips", "text": "Payslip for December. Gross salary, tax deducted, holiday pay basis, net paid."}
+{"name": "Course certificate.pdf", "expected": "Work/Training", "text": "Certificate of completion: project management course, 3 days, 24 hours."}
+{"name": "Scan 82.pdf", "expected": "Car/Insurance", "text": "Motor insurance for registration EV 12345: comprehensive cover, bonus 75 %."}
+{"name": "IMG_4709.jpg", "expected": "Car/Service", "text": "Periodic service at 90 000 km: oil change, brake check, new wiper blades."}
+{"name": "Vehicle registration.pdf", "expected": "Car/Registration", "text": "Vehicle registration certificate part 1, owner details, technical data."}
+{"name": "download.pdf", "expected": "Travel/Tickets", "note": "tickets"}
+{"name": "Hotel booking October.pdf", "expected": "Travel/Bookings", "text": "Booking confirmation: 3 nights in a double room, check-in from 15:00, free cancellation."}
+{"name": "Parent meeting.pdf", "expected": "Kids/School", "text": "Invitation to the parent-teacher meeting for class 4B on Thursday at 18:00."}
+{"name": "Football club fees December.pdf", "expected": "Kids/Activities", "text": "Membership and training fees for the under-11 football team, autumn season."}

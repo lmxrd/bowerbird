@@ -1,0 +1,5 @@
+/* The web app's theme (shadcn's tokens, Tailwind), and its components'
+   classes: they live in its src/. */
+@import "../../frontend/src/index.css";
+@source "../../frontend/src/components";
+@source "../../frontend/src/lib";

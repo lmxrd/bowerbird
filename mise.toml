@@ -1,5 +1,457 @@
+# Tool versions. Node and pnpm are read from the root package.json
+# (`devEngines.runtime` and `packageManager`), Rust from rust-toolchain.toml
+# (which rustup reads too): each version lives in one place. The Docker
+# image builds nothing (see the Dockerfile).
+[settings]
+idiomatic_version_file_enable_tools = ["node", "pnpm", "rust"]
+
 [tools]
+# The C compiler and linker of the static Linux binary (scripts/build-linux.sh),
+# so that it builds on a Mac too.
+zig = "0.15.2"
+"github:rust-cross/cargo-zigbuild" = "0.24.0"
+# Restarts the backend when its code changes (dev:backend).
+watchexec = "2.8.0"
+# The vulnerability scanners of `mise run audit` and `audit:image`.
+"aqua:google/osv-scanner" = "2.7.0"
+"aqua:aquasecurity/trivy" = "0.76.1"
+# The mobile apps (packages/ios, packages/android): XcodeGen makes the Xcode
+# project from project.yml; the JDK runs Gradle (its own version is the
+# committed wrapper's).
+"aqua:yonaskolb/XcodeGen" = "2.46.0"
+java = "temurin-25.0.5+8.0.LTS"
 
-[env]
+# ---------------------------------------------------------------------------
+# Development
+# ---------------------------------------------------------------------------
 
-[tasks]
+# The Rust backend on :8000 (with the Vite proxy in front of the frontend
+# for /api), and the frontend dev server.
+[tasks.dev]
+description = "Run the backend on :8000 and the frontend dev server"
+depends = ["dev:backend", "dev:frontend"]
+
+# Restarted when its code changes. It needs packages/frontend/dist to exist
+# to compile, even in debug.
+[tasks."dev:backend"]
+description = "Run the backend, restarted when its code changes"
+depends = ["build:frontend"]
+run = "watchexec --restart --stop-signal SIGINT --watch src --watch migrations --watch Cargo.toml --watch ../../Cargo.lock --exts rs,toml,sql --ignore '**/target/**' -- cargo run"
+dir = "{{ config_root }}/packages/backend"
+
+[tasks."dev:frontend"]
+description = "Run the frontend dev server (/api goes to :8000)"
+depends = ["install:frontend", "gen:sdk"]
+run = "pnpm run dev"
+dir = "{{ config_root }}/packages/frontend"
+
+# Run the server against a built frontend. Depends on the build so a stale
+# binary can never serve yesterday's code.
+[tasks.start]
+description = "Build and run the release binary"
+depends = ["build"]
+run = "../../dist/organizer"
+dir = "{{ config_root }}/packages/backend"
+
+# Tasks with sources and outputs are skipped when the outputs are newer
+# than the sources.
+#
+# The JavaScript workspace (frontend, SDK, end-to-end tests). Every frontend
+# task depends on this, so a fresh checkout (CI included) works; pnpm
+# installs frozen when CI is set.
+[tasks."install:frontend"]
+description = "Install the JavaScript workspace from the root lockfile"
+run = "pnpm install"
+sources = ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "packages/*/package.json"]
+outputs = ["node_modules/.pnpm/lock.yaml"]
+dir = "{{ config_root }}"
+
+# ---------------------------------------------------------------------------
+# Generated code
+# ---------------------------------------------------------------------------
+
+# The OpenAPI spec, written by the backend without the frontend embedded
+# (--features spec): the SDK is generated from it, so the spec comes first.
+[tasks."gen:spec"]
+description = "Write the OpenAPI spec to packages/backend/target/specs/openapi.json"
+run = "cargo run --features spec --bin openapi"
+sources = ["src/**/*", "migrations/**/*", "Cargo.toml", "../../Cargo.lock", "build.rs"]
+outputs = ["target/specs/openapi.json"]
+dir = "{{ config_root }}/packages/backend"
+
+# The SDK the frontend calls the API with (packages/sdk/src), generated from
+# the spec, never committed. One task, so that tasks running side by side
+# never generate it twice at once.
+[tasks."gen:sdk"]
+description = "Generate the TypeScript SDK (packages/sdk/src) from the spec"
+depends = ["install:frontend", "gen:spec"]
+run = "pnpm run openapi-ts"
+sources = ["../backend/target/specs/openapi.json", "openapi-ts.config.ts"]
+outputs = ["src/index.ts"]
+dir = "{{ config_root }}/packages/sdk"
+
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
+
+# The release binary for this machine, copied to dist/organizer out of the
+# target directory, wherever cargo is configured to put it (cargo has no
+# stable flag to put one artifact elsewhere).
+[tasks.build]
+description = "Build the release binary for this machine into dist/organizer"
+depends = ["build:frontend"]
+run = """
+cargo build --release
+mkdir -p ../../dist
+cp "$(cargo metadata --format-version 1 --no-deps | jq -r .target_directory)/release/organizer" ../../dist/organizer
+"""
+sources = [
+  "src/**/*",
+  "migrations/**/*",
+  "Cargo.toml",
+  "../../Cargo.lock",
+  "build.rs",
+  "../frontend/dist/**/*",
+]
+outputs = ["../../dist/organizer"]
+dir = "{{ config_root }}/packages/backend"
+
+[tasks."build:frontend"]
+description = "Build the frontend into packages/frontend/dist"
+depends = ["install:frontend", "gen:sdk"]
+run = "pnpm run build"
+sources = [
+  "src/**/*",
+  "index.html",
+  "vite.config.ts",
+  "tsconfig.json",
+  "components.json",
+  "package.json",
+  "../sdk/src/**/*",
+  "../../pnpm-lock.yaml",
+]
+dir = "{{ config_root }}/packages/frontend"
+
+# The static Linux binary (musl) the image copies, dist/organizer-linux-<arch>:
+# built outside the image, with this machine's cargo cache. ARCH=amd64 or
+# arm64 picks the architecture (default: this machine's).
+[tasks."build:linux"]
+description = "Build the static (musl) Linux binary into dist/organizer-linux-<arch>"
+depends = ["build:frontend"]
+run = "scripts/build-linux.sh"
+
+# The image: Alpine and the binary above, for the architecture of this
+# machine (ARCH=amd64 with --platform linux/amd64 builds the other one).
+# The Docker format, because podman's default (OCI) drops the HEALTHCHECK.
+[tasks."build:docker"]
+description = "Build the container image from the Linux binary"
+depends = ["build:linux"]
+run = "podman build --format docker -t organizer ."
+
+# ---------------------------------------------------------------------------
+# Checks and tests
+# ---------------------------------------------------------------------------
+
+[tasks.check]
+description = "Run every check (format, lint, types)"
+depends = ["check:frontend", "check:backend", "check:sync", "check:crypto"]
+
+# rust-embed needs packages/frontend/dist to exist to compile, hence the build.
+[tasks."check:backend"]
+description = "rustfmt and clippy (-D warnings), with and without the spec feature"
+depends = ["build:frontend"]
+run = """
+cargo fmt --check \
+  && cargo clippy --all-targets -- -D warnings \
+  && cargo clippy --features spec --all-targets -- -D warnings
+"""
+dir = "{{ config_root }}/packages/backend"
+
+[tasks."check:frontend"]
+description = "oxfmt, oxlint and tsc"
+depends = ["install:frontend", "gen:sdk"]
+run = "pnpm run check"
+dir = "{{ config_root }}/packages/frontend"
+
+[tasks.fix]
+description = "Apply the format and lint fixes"
+depends = ["fix:backend", "fix:frontend"]
+
+[tasks."fix:backend"]
+description = "cargo fmt"
+run = "cargo fmt"
+dir = "{{ config_root }}/packages/backend"
+
+[tasks."fix:frontend"]
+description = "oxfmt and oxlint --fix"
+depends = ["install:frontend"]
+run = "pnpm run fix"
+dir = "{{ config_root }}/packages/frontend"
+
+# ---------------------------------------------------------------------------
+# The mobile apps (docs/M4_DESIGN.md). Not part of `check` and `test`: they
+# need Xcode (macOS) and the Android SDK, and CI runs them as jobs of their
+# own. Their API clients are generated from the spec at build time.
+# ---------------------------------------------------------------------------
+
+[tasks."gen:ios"]
+description = "Make packages/ios/Organizer.xcodeproj from project.yml (XcodeGen)"
+depends = ["gen:spec"]
+run = "xcodegen generate --quiet"
+sources = ["project.yml"]
+outputs = ["Organizer.xcodeproj/project.pbxproj"]
+dir = "{{ config_root }}/packages/ios"
+
+[tasks."build:ios"]
+description = "Build the iOS app and its share extension for the simulator"
+depends = ["gen:ios"]
+run = "scripts/build.sh"
+dir = "{{ config_root }}/packages/ios"
+
+[tasks."test:ios"]
+description = "The iOS app's tests, on a simulator"
+depends = ["gen:ios"]
+run = "scripts/test.sh"
+dir = "{{ config_root }}/packages/ios"
+
+# The desktop app's File Provider extension and its tool (Swift, on
+# OrganizerKit) are linted with the iOS app.
+[tasks."check:ios"]
+description = "swift format lint (strict), of the iOS app and the desktop app's File Provider extension"
+run = "swift format lint --strict --recursive Sources Tests ../desktop/macos/FileProvider ../desktop/macos/Helper"
+dir = "{{ config_root }}/packages/ios"
+
+[tasks."fix:ios"]
+description = "swift format"
+run = "swift format --in-place --recursive Sources Tests ../desktop/macos/FileProvider ../desktop/macos/Helper"
+dir = "{{ config_root }}/packages/ios"
+
+[tasks."build:android"]
+description = "Build the Android app (debug APK)"
+depends = ["gen:spec"]
+run = "./gradlew --quiet assembleDebug"
+dir = "{{ config_root }}/packages/android"
+
+[tasks."test:android"]
+description = "The Android app's unit tests"
+depends = ["gen:spec"]
+run = "./gradlew --quiet testDebugUnitTest"
+dir = "{{ config_root }}/packages/android"
+
+[tasks."check:android"]
+description = "ktlint and Android lint"
+depends = ["gen:spec"]
+run = "./gradlew --quiet ktlintCheck lintDebug"
+dir = "{{ config_root }}/packages/android"
+
+[tasks."fix:android"]
+description = "ktlint format"
+run = "./gradlew --quiet ktlintFormat"
+dir = "{{ config_root }}/packages/android"
+
+# Unit and integration tests: the backend's (cargo) and the frontend's
+# (Vitest). The end-to-end smoke tests are `test:e2e`.
+[tasks.test]
+description = "Run the backend, frontend and sync engine tests"
+depends = ["test:backend", "test:frontend", "test:sync", "test:crypto"]
+
+[tasks."test:backend"]
+description = "The backend's unit and integration tests"
+depends = ["build:frontend"]
+run = "cargo test"
+sources = ["src/**/*", "tests/**/*", "migrations/**/*", "Cargo.toml", "../../Cargo.lock"]
+dir = "{{ config_root }}/packages/backend"
+
+[tasks."test:frontend"]
+description = "The frontend's Vitest unit tests"
+depends = ["install:frontend", "gen:sdk"]
+run = "pnpm run test"
+dir = "{{ config_root }}/packages/frontend"
+
+# The end-to-end smoke tests (packages/e2e, Playwright): a real browser
+# against the image just built, on a fresh database (scripts/e2e.sh).
+[tasks.eval]
+description = "The drop box's eval set (packages/backend/tests/eval) against the model of the AI_* variables: manual, never in CI"
+dir = "{{ config_root }}/packages/backend"
+run = "cargo run --release --example eval --"
+
+[tasks."test:e2e"]
+description = "Build the image and run the Playwright smoke tests against it"
+depends = ["build:docker", "install:frontend"]
+run = [
+  "pnpm --filter organizer-e2e exec playwright install chromium",
+  "scripts/e2e.sh",
+]
+
+# Federation with Nextcloud (docs/M7E_DESIGN.md §9.4): manual, never in CI.
+# It pulls a Nextcloud image (the exact tag is in the script), starts it with
+# podman and an Organizer server on this machine, and shares both ways.
+[tasks."interop:nextcloud"]
+description = "Share between a Nextcloud container and Organizer over OCM (manual: pulls an image)"
+depends = ["build:frontend"]
+run = "scripts/interop-nextcloud.sh"
+
+# ---------------------------------------------------------------------------
+# End-to-end encryption (docs/E2E_SPEC.md): the format's reference
+# implementation, its test vectors and organizer-decrypt (packages/e2e-crypto).
+# Its tests run organizer-decrypt against the backend, in-process.
+# ---------------------------------------------------------------------------
+
+[tasks."check:crypto"]
+description = "rustfmt and clippy (-D warnings) of the encryption crate"
+depends = ["build:frontend"]
+run = [
+  "cargo fmt -p organizer-e2e-crypto --check",
+  "cargo clippy -p organizer-e2e-crypto --all-targets -- -D warnings",
+]
+
+[tasks."test:crypto"]
+description = "The encryption crate's tests: the format, the vectors, organizer-decrypt"
+depends = ["build:frontend"]
+run = "cargo test -p organizer-e2e-crypto"
+
+# The vectors every client checks (packages/e2e-crypto/vectors.json), written
+# again from the reference implementation: after a change of the format.
+[tasks."gen:vectors"]
+description = "Write the encryption test vectors (packages/e2e-crypto/vectors.json)"
+run = "cargo run -p organizer-e2e-crypto --example vectors"
+
+# organizer-decrypt for this machine, into dist/.
+[tasks."build:decrypt"]
+description = "Build organizer-decrypt for this machine into dist/organizer-decrypt"
+run = """
+cargo build --release -p organizer-e2e-crypto --bin organizer-decrypt
+mkdir -p dist
+cp "$(cargo metadata --format-version 1 --no-deps | jq -r .target_directory)/release/organizer-decrypt" dist/organizer-decrypt
+"""
+
+# ---------------------------------------------------------------------------
+# The desktop app (docs/M5_DESIGN.md): the sync engine (packages/sync, a
+# library with no UI) and the Tauri app (packages/desktop: src-tauri and
+# its window, a Vite app built from the frontend's components). The engine
+# joins `check` and `test` (its tests need no display); the app has tasks
+# of its own, as it needs Tauri's system libraries on Linux. Each step is a
+# command of its own, so that they run on Windows too.
+# ---------------------------------------------------------------------------
+
+# The engine's API client is generated from the spec at build time (its
+# build.rs), and its tests start the backend, which embeds the frontend.
+# The engine's Cloud Files crate (packages/cloudfiles, on-demand folders
+# on Windows) is linted for Windows too, from any system: it needs nothing
+# but the target's std (rust-toolchain.toml), so its Windows-only code is
+# checked here and not only on the Windows runner.
+[tasks."check:sync"]
+description = "rustfmt and clippy (-D warnings) of the sync engine and its Cloud Files crate (for Windows too)"
+depends = ["gen:spec", "build:frontend"]
+run = [
+  "cargo fmt -p organizer-sync -p organizer-cloudfiles --check",
+  "cargo clippy -p organizer-sync -p organizer-cloudfiles --all-targets -- -D warnings",
+  "cargo clippy -p organizer-cloudfiles --all-targets --target x86_64-pc-windows-msvc -- -D warnings",
+]
+
+[tasks."test:sync"]
+description = "The sync engine's tests, against the backend in-process, and its Cloud Files crate's"
+depends = ["gen:spec", "build:frontend"]
+run = "cargo test -p organizer-sync -p organizer-cloudfiles"
+
+# The window's build (packages/desktop/dist), which the app embeds: the
+# Rust side does not compile without it.
+[tasks."build:desktop-ui"]
+description = "Build the desktop app's window into packages/desktop/dist"
+depends = ["install:frontend", "gen:sdk"]
+run = "pnpm run build"
+sources = [
+  "src/**/*",
+  "index.html",
+  "vite.config.ts",
+  "tsconfig.json",
+  "package.json",
+  "../frontend/src/**/*",
+  "../sdk/src/**/*",
+  "../../pnpm-lock.yaml",
+]
+outputs = ["dist/index.html"]
+dir = "{{ config_root }}/packages/desktop"
+
+# The engine's library only: its tests (which build the backend) are
+# linted by check:sync.
+[tasks."check:desktop"]
+description = "rustfmt and clippy (-D warnings) of the engine and the app; oxfmt, oxlint and tsc of its window"
+depends = ["gen:spec", "build:desktop-ui"]
+run = [
+  "cargo fmt -p organizer-sync -p organizer-cloudfiles -p organizer-desktop --check",
+  "cargo clippy -p organizer-sync --lib -- -D warnings",
+  "cargo clippy -p organizer-desktop --all-targets -- -D warnings",
+  "pnpm --dir packages/desktop run check",
+]
+
+[tasks."fix:desktop"]
+description = "cargo fmt of the engine and the app; oxfmt and oxlint --fix of its window"
+depends = ["install:frontend"]
+run = [
+  "cargo fmt -p organizer-sync -p organizer-cloudfiles -p organizer-desktop",
+  "pnpm --dir packages/desktop run fix",
+]
+
+[tasks."test:desktop"]
+description = "The desktop app's tests: its Rust side and its window's logic (Vitest)"
+depends = ["gen:spec", "build:desktop-ui"]
+run = [
+  "cargo test -p organizer-desktop",
+  "pnpm --dir packages/desktop run test",
+]
+
+# `tauri dev` starts the window's dev server (:5174) itself.
+[tasks."dev:desktop"]
+description = "Run the desktop app, restarted when its code changes"
+depends = ["gen:spec", "install:frontend", "gen:sdk"]
+run = "pnpm tauri dev"
+dir = "{{ config_root }}/packages/desktop"
+
+# This system's bundles (.app and .dmg on macOS, .msi and .exe on Windows,
+# .deb, .rpm and .AppImage on Linux), unsigned, copied to dist/desktop/ out
+# of the target directory, wherever cargo puts it.
+[tasks."build:desktop"]
+description = "Build the desktop app's bundles for this system into dist/desktop"
+depends = ["gen:spec", "install:frontend", "gen:sdk"]
+run = [
+  "pnpm --dir packages/desktop tauri build",
+  "node scripts/desktop-bundles.mjs",
+]
+
+# ---------------------------------------------------------------------------
+# Security
+# ---------------------------------------------------------------------------
+
+# Known vulnerabilities in the locked dependencies (the OSV database, which
+# has the RustSec and GitHub advisories). Every day in CI (security.yml), as
+# new advisories come out for dependencies that did not change. A finding
+# to accept goes in osv-scanner.toml, with the reason.
+[tasks.audit]
+description = "Known vulnerabilities in the lockfiles (osv-scanner)"
+run = "osv-scanner scan source --config osv-scanner.toml --lockfile Cargo.lock --lockfile pnpm-lock.yaml"
+dir = "{{ config_root }}"
+
+# Known vulnerabilities in an image (its Alpine packages): the fixable HIGH
+# and CRITICAL ones fail. IMAGE picks it, by default the published one; CI
+# scans the one it builds. The binary is static, so this is about the base.
+[tasks."audit:image"]
+description = "Known vulnerabilities in an image's Alpine packages (Trivy)"
+run = 'trivy image --skip-version-check --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "${IMAGE:-ghcr.io/lmxrd/organizer:latest}"'
+
+# ---------------------------------------------------------------------------
+# Housekeeping
+# ---------------------------------------------------------------------------
+
+# Remove everything that is generated or local: the Rust build (and the
+# OpenAPI spec in it), node_modules, the frontend build and the generated
+# SDK, and the local data. `mise run install:frontend` and a build bring it
+# all back.
+[tasks.clean]
+description = "Remove builds, node_modules, the generated SDK and the local data"
+dir = "{{ config_root }}"
+run = """
+rm -rf packages/backend/target packages/backend/data data dist
+rm -rf node_modules packages/*/node_modules packages/frontend/dist packages/sdk/src
+rm -f packages/sdk/openapi-ts-error-*.log
+"""

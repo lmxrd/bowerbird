@@ -1,0 +1,176 @@
+{
+  "about": "Organizer's end-to-end encryption test vectors (docs/E2E_SPEC.md §9). Bytes are hex; contents are bytes i % 251; written by `cargo run -p organizer-e2e-crypto --example vectors`.",
+  "backend_secrets": [
+    {
+      "ephemeral_private": "3f71c4fffa7bfe79b04a1fe2d6fa601775747e643fcde3d056f83c04e1189e6e",
+      "nonce": "91d5558f47087edf43163603",
+      "owner_id": "cdd473f8-c57b-40d5-1aba-6e853b2e4a18",
+      "recipient_private": "f1e9191312f8ed8d50f35f3f4bd6bd8657e20cbd233e5a56d76a61be976e96dd",
+      "recipient_public": "74c4d79465304ac578b364e84c8dc3934dc7dbc7686c04a2337da43d6f36f34c",
+      "sealed": "01b3322c24519d16c6dbddb52c54dab2256f961132a80ac867b07b3ebf31b2013d91d5558f47087edf43163603fbd78bffbeb43a8d88b1153bbedd5e94bfc6ea72cc871eea8c54c00b849bf55f4377ca4d9d608edcdfffff2825f4272a5786693c6b577329",
+      "sealed_base64url": "AbMyLCRRnRbG2921LFTasiVvlhEyqArIZ7B7Pr8xsgE9kdVVj0cIft9DFjYD-9eL_760Oo2IsRU7vt1elL_G6nLMhx7qjFTAC4Sb9V9Dd8pNnWCO3N___ygl9CcqV4ZpPGtXcyk",
+      "secret": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+    },
+    {
+      "ephemeral_private": "12bb90fce714a33890cbe7d8468969727262819b03d58a5f0dd22fa6abccefce",
+      "nonce": "175a118efcf44e787a71fb9a",
+      "owner_id": "2bc67d6a-3289-5ceb-c464-100422de243b",
+      "recipient_private": "237f86a9770f467410dbb102d3ad42d4b4998dc1a51c330790de63c80ea34555",
+      "recipient_public": "cc6f8aca2aab37ba0e7814613e1baa1d1f6f66ae03207e7685c3bc66fdea0c24",
+      "sealed": "012130cfd3497a05933e7e19b42b7ceb5f855440209480f076afd83042c85eee49175a118efcf44e787a71fb9a909a5f822cd0dee2219abd0b75020dac14c19113ed59cffcb71f",
+      "sealed_base64url": "ASEwz9NJegWTPn4ZtCt861-FVEAglIDwdq_YMELIXu5JF1oRjvz0Tnh6cfuakJpfgizQ3uIhmr0LdQINrBTBkRPtWc_8tx8",
+      "secret": "été 🔑"
+    }
+  ],
+  "contents": [
+    {
+      "encrypted": "010000000191f7520e2d49c88ae75f4d97e7a4980493ca6ec1be800a5014856ced08ae7d27fcffe89f473ea6d410f1df6343492335",
+      "encrypted_length": 53,
+      "encrypted_sha256": "5bafe5be3b1b80c16dccf3eda6851944f2c1ebd9601cb39b7cd4525d9bd3ea6f",
+      "file_key": "297827823ca45547907c83115a3b56b67140fa1db278ca3e595b248e6e21c194",
+      "file_nonce": "91f7520e2d49c88ae75f4d97e7a4980493ca6ec1be800a5014856ced08ae7d27",
+      "folder_key": "138c9849b6f73cac0a3db3664f3bf57fa378d26df49acc9bb5a97dc1826c45c5",
+      "generation": 1,
+      "plain_length": 0,
+      "plain_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "encrypted": "01000000021ec0cce3e50dfaf970f0487b0546a591884327443ac3626eb7b553f5f20f417109439520689c198e6d012595352344b32c827f1053d8674a218bfb09d1",
+      "encrypted_length": 66,
+      "encrypted_sha256": "7c7d2032dacde7b5bdc31798813e8c48c498698481e0611ea70e5206573676b4",
+      "file_key": "c16939e6fb5b95a9c9b022668e66aede98388188d51c913904503588355f1de6",
+      "file_nonce": "1ec0cce3e50dfaf970f0487b0546a591884327443ac3626eb7b553f5f20f4171",
+      "folder_key": "c363003aa7f0d2c206522db176069e6b774e4aaaef10e9c1bc59efb9bad15198",
+      "generation": 2,
+      "plain_length": 13,
+      "plain_sha256": "86eba947d50c2c01570fe1bb5ca552958dabbdbb59b0657f0f26e21ff011e5c7"
+    },
+    {
+      "encrypted_length": 65589,
+      "encrypted_sha256": "deeb117f5df7de1fd5b7003c514fa2a2972ad44d965aeb66869d5d8a4b51870a",
+      "file_key": "ad9f3daab753983d3ea674d186b811842f38d01cc39cc399edf8687cd622d392",
+      "file_nonce": "e547656382038994eede4eb9beee23bc3676ec318cdbcaee50be63ca1a27a133",
+      "folder_key": "5e0000653229db443f562df3478de1892d5f6aa004b78c738a14d4ab43c61fe8",
+      "generation": 3,
+      "plain_length": 65536,
+      "plain_sha256": "4b640d85ab3ba30fd02c9fc9db4a8928f416322ad27022ea58a65aaee68a4df2"
+    },
+    {
+      "encrypted_length": 132157,
+      "encrypted_sha256": "5702df6ddfe1d1ba8c8fabb81a516afb678b85cda0eadb293496110292046f20",
+      "file_key": "a6121093cee76edb4d9a9e2786ee4af61042f1af224be5f6d07ed6f92e83c606",
+      "file_nonce": "6118f991483be432e01233b2836e01b9bd3320385fbf57e067d1334466dd3848",
+      "folder_key": "da7d062b77b6a6058d19f79497a88cd8a59eff8c56444a7e4a24dd274ac72d43",
+      "generation": 4,
+      "plain_length": 132072,
+      "plain_sha256": "7c0266839dabf6180f9dedee790c97ad810cc4fc81963640eb046eedb53ba4f0"
+    }
+  ],
+  "folder_keys": [
+    {
+      "ephemeral_private": "7b633115db5b9accef0113ba19a90cedce35e3c67dc978d065492ef0b7346fe4",
+      "ephemeral_public": "a2fdf5fe5a21d9928700da78775bf824d621e08847e7dbbfe908500f51bda659",
+      "folder_id": "eeec8e56-8b53-f52c-29ce-08380b67214c",
+      "folder_key": "138c9849b6f73cac0a3db3664f3bf57fa378d26df49acc9bb5a97dc1826c45c5",
+      "generation": 1,
+      "nonce": "50b565e39f50ffccf17721c7",
+      "recipient_private": "f1e9191312f8ed8d50f35f3f4bd6bd8657e20cbd233e5a56d76a61be976e96dd",
+      "recipient_public": "74c4d79465304ac578b364e84c8dc3934dc7dbc7686c04a2337da43d6f36f34c",
+      "wrapped": "01a2fdf5fe5a21d9928700da78775bf824d621e08847e7dbbfe908500f51bda65950b565e39f50ffccf17721c7039aab8c1653ddeb3bb20518c556a08b0c1ea1d9d083f59836c4a9b5cb80a90bc289def4f3bd843b062e807b3e0c80f7",
+      "wrapped_base64url": "AaL99f5aIdmShwDaeHdb-CTWIeCIR-fbv-kIUA9RvaZZULVl459Q_8zxdyHHA5qrjBZT3es7sgUYxVagiwweodnQg_WYNsSptcuAqQvCid70872EOwYugHs-DID3"
+    },
+    {
+      "ephemeral_private": "bc7f92de1c0c7ca0972fb6c3093be1783a412fd5e222f06d4185d8ecd9f6e253",
+      "ephemeral_public": "4a4732eb049aebb7ef7db642cc8b43f0fa62b49ca772bf75db741fa921d21555",
+      "folder_id": "81f5b74e-feea-bfed-3b06-cae18d983e95",
+      "folder_key": "ebb3470d628437962ab23371d27cd60b4cf528de6b778ae337d8d829f8d042c2",
+      "generation": 7,
+      "nonce": "80684f826bacdcebd7434546",
+      "recipient_private": "237f86a9770f467410dbb102d3ad42d4b4998dc1a51c330790de63c80ea34555",
+      "recipient_public": "cc6f8aca2aab37ba0e7814613e1baa1d1f6f66ae03207e7685c3bc66fdea0c24",
+      "wrapped": "014a4732eb049aebb7ef7db642cc8b43f0fa62b49ca772bf75db741fa921d2155580684f826bacdcebd743454663120a69cb055ff9f0b4f049bb20cdb33625c7187f423a1adce2da0f14f4253890b9544847643da20148efd3510a1e93",
+      "wrapped_base64url": "AUpHMusEmuu37322QsyLQ_D6YrScp3K_ddt0H6kh0hVVgGhPgmus3OvXQ0VGYxIKacsFX_nwtPBJuyDNszYlxxh_Qjoa3OLaDxT0JTiQuVRIR2Q9ogFI79NRCh6T"
+    }
+  ],
+  "format_version": 1,
+  "identities": [
+    {
+      "private": "237f86a9770f467410dbb102d3ad42d4b4998dc1a51c330790de63c80ea34555",
+      "public": "cc6f8aca2aab37ba0e7814613e1baa1d1f6f66ae03207e7685c3bc66fdea0c24"
+    },
+    {
+      "private": "f1e9191312f8ed8d50f35f3f4bd6bd8657e20cbd233e5a56d76a61be976e96dd",
+      "public": "74c4d79465304ac578b364e84c8dc3934dc7dbc7686c04a2337da43d6f36f34c"
+    }
+  ],
+  "names": [
+    {
+      "decrypted": "Taxes 2026.pdf",
+      "encrypted": "AQAAAAEwM4pD2WBSLtibZk9JE5-79zY43QgW8YTioEZtD8HiqDLSvqcgvNbgq-0",
+      "folder_key": "138c9849b6f73cac0a3db3664f3bf57fa378d26df49acc9bb5a97dc1826c45c5",
+      "generation": 1,
+      "name": "Taxes 2026.pdf",
+      "name_key": "a3c6dac1b04cf2ee194283de5e3302551ecfdd8d0faaa686feb642a9710ae621",
+      "nonce": "30338a43d960522ed89b664f",
+      "parent_id": "b0a582e2-89a0-72a8-6620-e1bfa432e839"
+    },
+    {
+      "decrypted": "Photos",
+      "encrypted": "AQAAAAIiM0LzRfBdwY3d3aIRxqqzicDK6YX5VMHK2rNJBAONATGk",
+      "folder_key": "c363003aa7f0d2c206522db176069e6b774e4aaaef10e9c1bc59efb9bad15198",
+      "generation": 2,
+      "name": "Photos",
+      "name_key": "26e73f837726ba3bfc5264e591dcee9e58829beb2952fd080c4369c123d7ad01",
+      "nonce": "223342f345f05dc18ddddda2",
+      "parent_id": "a6de66c4-8854-e9a5-129d-34a587eea585"
+    },
+    {
+      "decrypted": "Café ☕.txt",
+      "encrypted": "AQAAAALsGkVZoNZ2pPQPBvnIvY0HYZ5oTnmsKU22xNBPqA0yMIKxi-upTGHkKw",
+      "folder_key": "c363003aa7f0d2c206522db176069e6b774e4aaaef10e9c1bc59efb9bad15198",
+      "generation": 2,
+      "name": "Café ☕.txt",
+      "name_key": "26e73f837726ba3bfc5264e591dcee9e58829beb2952fd080c4369c123d7ad01",
+      "nonce": "ec1a4559a0d676a4f40f06f9",
+      "parent_id": "03997a52-4dcb-00bd-b468-d09ae07c9a76"
+    }
+  ],
+  "passphrases": [
+    {
+      "iterations": 100000,
+      "key": "c67f93490dc5075cbc01ab8b6ae558438b5eb996a04b498ae50252b099b0cb91",
+      "nonce": "02775534bc673dd464dd886a",
+      "passphrase": "correct horse battery staple",
+      "private": "2173fce96b42c0f9b3fc2e84f112d70944b637a7cf815bfcac87fc9d87147372",
+      "salt": "3261b4a8fbe54b47c0109b1cc71a9cb5",
+      "wrapped": "0102775534bc673dd464dd886aa44eabec12e1d36fe141d627a852024a49f4147735da69066ff65b167fd0cb418a16a768997a7124726922db54ddbea4"
+    },
+    {
+      "iterations": 100000,
+      "key": "e53465bc6a44e8df4ade2f45857a8de97b6a8ad9762c0d709c288bf7a2618789",
+      "nonce": "3974c52b3f7b8e2e4476a52d",
+      "passphrase": "Crème brûlée 🔐",
+      "private": "d49baf094adca8a6efcef83f12fbceb07fdb4de638fd4ff3f013d3dd0c7c7d5d",
+      "salt": "c3a6a8530dbb478fb70a6ca8c7263a94",
+      "wrapped": "013974c52b3f7b8e2e4476a52d66bc2db9cd9a4fc8ca7bd9fb70fc7b51513101ccde7af545bdc1d1f96afa1cfd44a6150c528be01e0333c29700c98357"
+    }
+  ],
+  "recovery_keys": [
+    {
+      "key": "29e5c6f60751c62e4709f0e5eea82a0abd5a5807c1d976d04909d0bcf978acb5",
+      "nonce": "5e7bffcc71cae123f9859fc6",
+      "private": "b6ebeacd581559516ffe289cb0caad586a8dc72066114d751eb2e868942f16ea",
+      "text": "FHS4-N5QH-KHDC-4RYJ-6DS6-5KBK-BK6V-UWAH-YHMX-NUCJ-BHIL-Z6LY-VS2Q",
+      "wrapped": "015e7bffcc71cae123f9859fc62c4bd3b2212394477fb739340cb1f16870c30f44a4ff9c318e329ac80e9c3e499eff2c17d0a6f08e0169c88ccac4bf4a",
+      "wrapping_key": "b5df9a920e1c68108b2bce6ef7a5e249b8fa1145731ca3394821b3edb611c994"
+    },
+    {
+      "key": "6b6b4357caa399e7cfbf456ed243a6197e7ed2f2e5406138d3bbfa27d510748f",
+      "nonce": "d76bbbda1f1bed9123f20f64",
+      "private": "a092c981514345ebaa497488c273ceceacd030cdd4d9e618b888e9cb91f46574",
+      "text": "NNVU-GV6K-UOM6-PT57-IVXN-EQ5G-DF7H-5UXS-4VAG-COGT-XP5C-PVIQ-OSHQ",
+      "wrapped": "01d76bbbda1f1bed9123f20f64e26ccc31096c2497f79461d1a2a6b4fa52f6b34308009f7b66354c33d476c0575615d0f761aeed976b2a3add7a9740f3",
+      "wrapping_key": "86c187b9bd76920e528e86fcae9323d5105b08cf0512d1fb093a1c298d9d5668"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+# Made by XcodeGen from project.yml (scripts/build.sh).
+OrganizerFileProvider.xcodeproj/
+FileProvider/Info.plist
+FileProvider/*.entitlements
+Helper/*.entitlements
+# The build (scripts/build.sh): DerivedData, and the products the Tauri
+# bundle takes.
+build/

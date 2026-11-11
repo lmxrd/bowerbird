@@ -1,0 +1,11 @@
+# Made by XcodeGen from project.yml (`mise run gen:ios`).
+Organizer.xcodeproj/
+Sources/*/Info.plist
+Sources/*/*.entitlements
+# The spec, copied by scripts/spec.sh.
+Sources/OrganizerKit/OrganizerKit/openapi.json
+# Builds (xcodebuild uses Xcode's own DerivedData; these are SwiftPM's
+# when the package is built on its own).
+Sources/OrganizerKit/.build/
+Sources/OrganizerKit/.swiftpm/
+Sources/OrganizerKit/Package.resolved

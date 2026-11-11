@@ -1,0 +1,23 @@
+{
+  "name": "organizer-sdk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.gen.ts",
+    "./react-query": "./src/@tanstack/react-query.gen.ts",
+    "./types": "./src/types.gen.ts",
+    "./zod": "./src/zod.gen.ts"
+  },
+  "scripts": {
+    "openapi-ts": "openapi-ts"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.99.0"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.105.0",
+    "zod": "^4.6.7"
+  }
+}

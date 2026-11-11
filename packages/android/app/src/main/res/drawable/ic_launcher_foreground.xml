@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A folder with an arrow into it, in the adaptive icon's safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M34,38h14l5,5h21a4,4 0,0 1,4 4v21a4,4 0,0 1,-4 4H34a4,4 0,0 1,-4 -4V42a4,4 0,0 1,4 -4z" />
+    <path
+        android:fillColor="#FF2E5E4E"
+        android:pathData="M52,48h4v10l4,-4 3,3 -9,9 -9,-9 3,-3 4,4z" />
+</vector>

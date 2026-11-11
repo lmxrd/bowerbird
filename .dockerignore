@@ -1,0 +1,10 @@
+# The image copies only the prebuilt binary of dist/ (see the Dockerfile).
+.git
+data
+dist/*
+!dist/organizer-linux-*
+node_modules
+packages/*/node_modules
+packages/frontend/dist
+packages/backend/target
+packages/sdk/src

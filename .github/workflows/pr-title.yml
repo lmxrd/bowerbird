@@ -1,0 +1,28 @@
+name: PR title
+
+# Pull requests are squash merged, and the commit that lands on main takes
+# the pull request's title. release-please reads that commit to decide the
+# next version and to write the changelog, and it skips a commit that is not
+# a Conventional Commit (in Potoo, "Feat/import visitor (#6)" released
+# nothing). GitHub fills a new pull request's title from the branch name, so
+# it has to be written as `type(scope): description` before merging.
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  conventional-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: The title is a Conventional Commit
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if ! grep -Eq '^(feat|fix|perf|refactor|docs|test|build|ci|chore|style|revert)(\([a-z0-9._/-]+\))?!?: .+' <<< "$TITLE"; then
+            echo "::error title=Not a Conventional Commit::\"$TITLE\" must look like \"feat: add a thing\", \"fix(auth): ...\" or \"feat!: ...\" (types: feat, fix, perf, refactor, docs, test, build, ci, chore, style, revert)."
+            exit 1
+          fi

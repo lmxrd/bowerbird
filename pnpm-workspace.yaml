@@ -1,0 +1,23 @@
+# The JavaScript packages: the frontend, the SDK it imports (generated from
+# the backend's OpenAPI spec, `mise run gen:sdk`), the end-to-end tests, and
+# the desktop app's window (which imports the frontend's components). One
+# install and one lockfile at this root.
+packages:
+  - packages/frontend
+  - packages/sdk
+  - packages/e2e
+  - packages/desktop
+
+# A version published less than a day ago is not installed (pnpm picks an
+# older one that fits, or fails): most hijacked releases are found and pulled
+# within hours. Dependabot waits longer for routine updates (5 days, see
+# .github/dependabot.yml), so this never blocks one; it only holds an npm
+# security fix back by a day at most.
+minimumReleaseAge: 1440
+
+# @hey-api/json-schema-ref-parser (of the API client generator, a dev tool)
+# pins js-yaml to exactly 4.2.0, which has known vulnerabilities
+# (GHSA-2883-xcg3-v3hh, GHSA-52cp-r559-cp3m, GHSA-5p4m-2wfm-xmqj). The fix
+# is a minor version later. Remove this once the parser allows it.
+overrides:
+  js-yaml: ^4.3.2

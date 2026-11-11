@@ -1,0 +1,157 @@
+name: Release
+
+# Every push to main updates the release PR (version bump and changelog,
+# from the conventional commits). Merging it creates the tag and the
+# GitHub release, and only then do the jobs below run: natively on an
+# amd64 and an arm64 runner (no cross compiling, no emulation) they build
+# the Linux binaries, attached to the release, and the image, pushed to
+# the GitHub Container Registry as one multi-arch manifest. CI never
+# pushes, except the lockfile fix below on the release PR's branch.
+#
+# Needs "Allow GitHub Actions to create and approve pull requests" in the
+# repository's Actions settings.
+
+on:
+  push:
+    branches: [main]
+  # Daily too: Dependabot's updates are merged by a workflow's token, and a
+  # push made with that token starts no workflow, so this picks them up
+  # (it only updates the release PR; a release still needs it merged).
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      created: ${{ steps.release.outputs.release_created }}
+      tag: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v5
+        id: release
+
+      # release-please bumps the version in packages/backend/Cargo.toml but
+      # cannot bump the organizer entry of Cargo.lock (its toml updater does
+      # not match it), so cargo does it on the release PR's branch. `-w`
+      # touches only the workspace's own packages, never a dependency.
+      # A push with the default token starts no workflow; the next push to
+      # main makes release-please rewrite the branch, and this runs again.
+      - uses: actions/checkout@v7
+        if: steps.release.outputs.prs_created == 'true'
+        with:
+          ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+
+      - name: Update Cargo.lock on the release PR
+        if: steps.release.outputs.prs_created == 'true'
+        run: |
+          cargo update --workspace
+          if git diff --quiet -- Cargo.lock; then
+            echo "Cargo.lock is up to date"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add Cargo.lock
+            git commit -m "chore: update Cargo.lock to the release version"
+            git push
+          fi
+
+  # On each architecture's runner: the static (musl) binary, which runs on
+  # any Linux, attached to the release with its checksum (and the OpenAPI
+  # spec, once), and the image, which copies that very binary (the
+  # Dockerfile builds nothing), pushed by digest only; `manifest` tags them.
+  binaries:
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
+    strategy:
+      matrix:
+        include:
+          - { runner: ubuntu-latest, arch: amd64 }
+          - { runner: ubuntu-24.04-arm, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.tag }}
+      - uses: jdx/mise-action@v4
+      # dist/organizer-linux-<arch>, with the frontend (built from the OpenAPI
+      # spec the backend writes first) embedded.
+      - run: mise run build:linux
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag }}
+        run: |
+          mkdir release
+          cp "dist/organizer-linux-${{ matrix.arch }}" release/
+          # The OpenAPI spec (written by the build, identical on both
+          # runners), attached once.
+          if [ "${{ matrix.arch }}" = amd64 ]; then
+            cp packages/backend/target/specs/openapi.json release/
+          fi
+          (cd release && sha256sum -- * > "SHA256SUMS-${{ matrix.arch }}")
+          gh release upload "$TAG" release/* --clobber
+      - run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        id: build
+        with:
+          context: .
+          provenance: false
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+      - run: |
+          mkdir digests
+          touch "digests/${DIGEST#sha256:}"
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ matrix.arch }}
+          path: digests/*
+          if-no-files-found: error
+
+  # The tags 1.2.3, 1.2 and latest (prereleases get only the exact
+  # version), pointing at both images.
+  manifest:
+    needs: [release-please, binaries]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: digests-*
+          path: digests
+          merge-multiple: true
+      - uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          flavor: latest=false
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.release-please.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release-please.outputs.tag }}
+            type=raw,value=latest,enable=${{ !contains(needs.release-please.outputs.tag, '-') }}
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf "$IMAGE@sha256:%s " $(ls digests))

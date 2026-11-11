@@ -1,0 +1,196 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # The quality gates, exactly as locally: the tools come from mise.toml
+  # and the checks and tests are the same tasks. The default target on
+  # the bare runner — no matrix, no cross compiling — and nothing is
+  # pushed: releases publish, CI only verifies.
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-check-${{ hashFiles('Cargo.lock') }}
+      - run: mise run check
+      - run: mise run test
+
+  # The builds run in parallel once the checks pass: the release build,
+  # and the image. Separate cache keys, since the checks cache a debug
+  # target directory and this one a release one.
+  build:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-build-${{ hashFiles('Cargo.lock') }}
+      - run: mise run build
+
+  # The image copies the static binary built just before it, with the
+  # same task and cargo cache as locally (the Dockerfile builds nothing).
+  # Built, never pushed.
+  docker:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-linux-${{ hashFiles('Cargo.lock') }}
+      - run: mise run build:linux
+      - run: docker build -t organizer:ci .
+      # Started once, until its own HEALTHCHECK (`organizer healthcheck`) says
+      # healthy, so a packaging bug fails the PR, not the release.
+      - name: Run the image and check its health check
+        run: |
+          docker run --rm -d --name organizer-ci organizer:ci
+          for _ in $(seq 1 30); do
+            status="$(docker inspect -f '{{.State.Health.Status}}' organizer-ci)"
+            [ "$status" = healthy ] && exit 0
+            sleep 2
+          done
+          docker logs organizer-ci
+          exit 1
+      # Its Alpine packages: a fixable HIGH or CRITICAL one fails the PR.
+      # Trivy's database is cached for the day (security.yml scans the
+      # published image every day).
+      - id: day
+        run: echo "day=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ steps.day.outputs.day }}
+          restore-keys: trivy-db-
+      - run: mise run audit:image
+        env:
+          IMAGE: organizer:ci
+      # The end-to-end smoke tests (packages/e2e): a real browser against this
+      # image, on a fresh database. Only Chromium, cached by Playwright's
+      # version (its system libraries are installed every time).
+      - run: mise run install:frontend
+      - id: playwright
+        run: echo "version=$(jq -r '.devDependencies["@playwright/test"]' packages/e2e/package.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - run: pnpm --filter organizer-e2e exec playwright install --with-deps chromium
+      - run: scripts/e2e.sh
+        env:
+          CONTAINER: docker
+          IMAGE: organizer:ci
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: e2e-results
+          path: packages/e2e/test-results
+
+  # The mobile apps (docs/M4_DESIGN.md), each with its own tasks: the spec
+  # is written first (gen:spec, a backend build), then the API clients are
+  # generated from it inside each app's build.
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-spec-${{ hashFiles('Cargo.lock') }}
+      - run: mise run check:ios
+      - run: mise run build:ios
+      - run: mise run test:ios
+
+  # The desktop app (docs/M5_DESIGN.md) on the three systems it ships for:
+  # its checks, the sync engine's tests (the backend in-process) and the
+  # app's, and this system's unsigned bundles, kept for a week.
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    # mise would otherwise install every tool of mise.toml before a task.
+    env:
+      MISE_TASK_RUN_AUTO_INSTALL: "false"
+    steps:
+      - uses: actions/checkout@v7
+      # Tauri's system libraries (webkit2gtk 4.1, the tray's appindicator).
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      # Only the tools the desktop app needs: the others (XcodeGen, the JDK,
+      # zig) are for the mobile apps and the Linux image.
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: node pnpm rust
+      # The macOS bundle builds the File Provider extension with XcodeGen.
+      - if: runner.os == 'macOS'
+        run: mise install aqua:yonaskolb/XcodeGen
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-desktop-${{ hashFiles('Cargo.lock') }}
+      - run: mise run check:desktop
+      - run: mise run test:sync
+      - run: mise run test:desktop
+      - run: mise run build:desktop
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ runner.os }}
+          path: dist/desktop
+          retention-days: 7
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-spec-${{ hashFiles('Cargo.lock') }}
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('packages/android/gradle/libs.versions.toml', 'packages/android/gradle/wrapper/gradle-wrapper.properties') }}
+      - run: mise run check:android
+      - run: mise run build:android
+      - run: mise run test:android

@@ -1,0 +1,86 @@
+# Dependency updates, weekly, plus security updates as soon as an advisory
+# is out (those are switched on in the repository's settings and use the
+# entries below). Every title is a Conventional Commit, because pull
+# requests are squash merged with their title and release-please reads it:
+#
+# - What ships in the binary or the image (the backend's crates, the
+#   frontend's dependencies, the base image) is `fix(deps)`: merging it
+#   makes release-please open a patch release, so a security fix reaches
+#   users. The frontend's devDependencies (Vite, oxlint, ...) only build it:
+#   `chore(deps-dev)`, no release. Cargo has no such prefix, so a crate's
+#   dev-dependency counts as shipped.
+# - Minor and patch updates (and security ones) merge on their own once CI
+#   passes (dependabot-auto-merge.yml); majors wait for a person, in a pull
+#   request of their own so that the safe updates never wait for them.
+# - A routine update waits 5 days after its release (cooldown): most
+#   hijacked releases are found and pulled within that time. Security
+#   updates do not wait. pnpm's own minimum release age (1 day, in
+#   pnpm-workspace.yaml) is shorter, so it never blocks an update
+#   Dependabot proposes; it holds an npm security fix back by a day at most.
+version: 2
+
+updates:
+  # The Rust workspace (the backend, and the desktop app's crates). The
+  # root Cargo.lock is bumped with the manifests.
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    commit-message:
+      prefix: fix
+      include: scope
+    groups:
+      cargo-minor-and-patch:
+        update-types: [minor, patch]
+      cargo-major:
+        update-types: [major]
+
+  # The frontend (pnpm: Dependabot reads pnpm-lock.yaml through this
+  # ecosystem). It is embedded in the binary, so it ships.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    commit-message:
+      prefix: fix
+      prefix-development: chore
+      include: scope
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+      npm-major:
+        update-types: [major]
+
+  # The versions of the actions the workflows use.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # The base image of the Dockerfile, pinned to an exact Alpine release
+  # (alpine:3.x.y). The binary is built outside it (with the toolchains of
+  # mise.toml, which Dependabot does not read).
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 5
+    commit-message:
+      prefix: fix
+      include: scope

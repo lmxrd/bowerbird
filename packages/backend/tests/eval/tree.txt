@@ -1,0 +1,40 @@
+Home
+Home/Bills
+Home/Bills/Electricity | power 2025-09.pdf
+Home/Bills/Water | water q2.pdf
+Home/Bills/Internet | fiber invoice may.pdf
+Home/Mortgage | loan agreement.pdf
+Home/Insurance | home policy 2025.pdf
+Home/Repairs | roof quote.pdf
+Home/Manuals | dishwasher manual.pdf
+Health
+Health/Doctor | blood test results.pdf
+Health/Dentist | cleaning invoice.pdf
+Health/Prescriptions | prescription march.pdf
+Health/Vaccinations | vaccination card.pdf
+Money
+Money/Bank statements | statement 2025-08.pdf
+Money/Taxes
+Money/Taxes/2024 | tax return 2024.pdf
+Money/Taxes/2025 | tax assessment 2025.pdf
+Money/Pension | pension overview.pdf
+Money/Receipts | laptop receipt.pdf
+Work
+Work/Contracts | employment contract.pdf
+Work/Payslips | payslip 2025-09.pdf
+Work/Training | first aid certificate.pdf
+Car
+Car/Insurance | car policy.pdf
+Car/Service | service 60000 km.pdf
+Car/Registration | registration certificate.pdf
+Travel
+Travel/Tickets | train tickets oslo.pdf
+Travel/Bookings | hotel booking rome.pdf
+Kids
+Kids/School | report card spring.pdf
+Kids/Activities | football fees.pdf
+Recipes | pancakes.txt
+Pets
+Pets/Vet | vet invoice.pdf
+Identity
+Identity/Passports | passport scan.pdf

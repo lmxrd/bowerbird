@@ -1,0 +1,59 @@
+name: Security
+
+# Known vulnerabilities, every day: new advisories come out for dependencies
+# that did not change. A failed scheduled run is mailed to the repository's
+# admins. Pull requests that change a lockfile are checked too; the image a
+# pull request builds is scanned in CI (ci.yml), where it is built anyway.
+#
+# Nothing is built here, so the jobs only install their scanner (not Rust or
+# Node): MISE_AUTO_INSTALL off, and mise-action installs that one tool.
+
+on:
+  schedule:
+    - cron: "30 5 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - Cargo.lock
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - osv-scanner.toml
+      - .github/workflows/security.yml
+
+permissions:
+  contents: read
+
+env:
+  MISE_AUTO_INSTALL: "false"
+  MISE_TASK_RUN_AUTO_INSTALL: "false"
+
+jobs:
+  # The locked crates and npm packages, against the OSV database (online:
+  # it is always the latest, and it takes seconds).
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: aqua:google/osv-scanner
+      - run: mise run audit
+
+  # The published image's Alpine packages. Trivy's database (about 80 MB) is
+  # cached for the day, so a rerun does not download it again.
+  image:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: aqua:aquasecurity/trivy
+      - id: day
+        run: echo "day=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ steps.day.outputs.day }}
+          restore-keys: trivy-db-
+      - run: mise run audit:image

@@ -1,0 +1,11 @@
+{
+  "name": "organizer",
+  "private": true,
+  "packageManager": "pnpm@12.18.0",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "26.13.0"
+    }
+  }
+}

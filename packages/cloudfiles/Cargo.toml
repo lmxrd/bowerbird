@@ -1,0 +1,14 @@
+[package]
+name = "organizer-cloudfiles"
+version = "0.0.0"
+description = "Windows' Cloud Files API for the sync engine's on-demand folders"
+edition = "2024"
+
+# Unsafe code is denied, not forbidden: the one module that calls into
+# Windows (`src/cfapi.rs`, built on Windows only) allows it, and nothing
+# else may.
+[lints.rust]
+unsafe_code = "deny"
+
+[target."cfg(windows)".dependencies]
+windows = { version = "0.62.2", features = ["Foundation", "Storage", "Storage_Provider", "Storage_Search", "Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_CloudFilters", "Win32_Storage_FileSystem", "Win32_System_CorrelationVector", "Win32_System_IO", "Win32_System_Threading"] }

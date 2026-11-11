@@ -1,0 +1,23 @@
+# Known vulnerabilities that are accepted, each with the reason. Each one
+# expires (`ignoreUntil`), so it comes back up in `mise run audit` and the
+# daily Security workflow to be looked at again:
+#
+#   [[IgnoredVulns]]
+#   id = "RUSTSEC-YYYY-NNNN"
+#   ignoreUntil = YYYY-MM-DD
+#   reason = "Why it cannot reach us, or why there is no fix yet."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2023-0071"
+ignoreUntil = 2027-05-06
+reason = "rsa (Marvin attack): no fixed version exists. It comes in through openidconnect, which only verifies the provider's RS256 signatures with its public key; the timing side channel is in decrypting and signing with a private key, which Organizer never does. Potoo accepts it for the same reason."
+
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2027-05-06
+reason = "deepmerge, no fixed version: it comes in only through the shadcn CLI (@shadcn/registry), which `shadcn init` installs for its stylesheet (shadcn/tailwind.css, read by Vite at build time). The CLI runs on a developer's machine on our own components.json; none of it is in the bundle the browser gets."
+
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+ignoreUntil = 2027-05-06
+reason = "minimatch 10 (fixed in 11): it comes in only through the shadcn CLI (ts-morph), as above, matching our own file patterns on a developer's machine; none of it is in the bundle. Forcing 11 under ts-morph is a major change in a tool we do not own: wait for shadcn to update it."

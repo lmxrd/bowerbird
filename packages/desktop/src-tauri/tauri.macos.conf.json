@@ -1,0 +1,15 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "build": {
+    "beforeBundleCommand": "bash macos/scripts/build.sh"
+  },
+  "bundle": {
+    "macOS": {
+      "files": {
+        "PlugIns/OrganizerFileProvider.appex": "../macos/build/Products/OrganizerFileProvider.appex",
+        "MacOS/organizer-fileprovider": "../macos/build/Products/organizer-fileprovider",
+        "Frameworks/libswiftCompatibilitySpan.dylib": "../macos/build/Products/Frameworks/libswiftCompatibilitySpan.dylib"
+      }
+    }
+  }
+}
