@@ -1,4 +1,4 @@
-# Organizer
+# Bowerbird
 
 A light, self-hosted file server whose **drop box** files things for you:
 drop files, folders or links in, and a local AI proposes where they belong
@@ -8,8 +8,10 @@ and mount over WebDAV. One program, one SQLite file, your files as plain
 files on disk.
 
 > **Status: early development.** Nothing here is usable yet. The plan is in
-> [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); "Organizer" is a working
-> name.
+> [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+> The [bowerbird](https://en.wikipedia.org/wiki/Bowerbird) is a collector:
+> it keeps the tiny trinkets it finds organized, sorted by colour and size.
 
 ## Running it
 
