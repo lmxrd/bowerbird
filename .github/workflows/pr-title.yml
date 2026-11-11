@@ -17,6 +17,8 @@ permissions:
 jobs:
   conventional-title:
     runs-on: ubuntu-latest
+    # Temporary: stop runaway jobs while CI is made faster.
+    timeout-minutes: 1
     steps:
       - name: The title is a Conventional Commit
         env:

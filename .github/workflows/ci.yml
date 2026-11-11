@@ -15,6 +15,8 @@ jobs:
   # pushed: releases publish, CI only verifies.
   checks:
     runs-on: ubuntu-latest
+    # Temporary: stop runaway jobs while CI is made faster.
+    timeout-minutes: 1
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
@@ -34,6 +36,8 @@ jobs:
   build:
     needs: checks
     runs-on: ubuntu-latest
+    # Temporary: stop runaway jobs while CI is made faster.
+    timeout-minutes: 1
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
@@ -52,6 +56,8 @@ jobs:
   docker:
     needs: checks
     runs-on: ubuntu-latest
+    # Temporary: stop runaway jobs while CI is made faster.
+    timeout-minutes: 1
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
@@ -115,6 +121,8 @@ jobs:
   # generated from it inside each app's build.
   ios:
     runs-on: macos-latest
+    # Temporary: stop runaway jobs while CI is made faster.
+    timeout-minutes: 1
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
@@ -138,6 +146,8 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    # Temporary: stop runaway jobs while CI is made faster.
+    timeout-minutes: 1
     # mise would otherwise install every tool of mise.toml before a task.
     env:
       MISE_TASK_RUN_AUTO_INSTALL: "false"
@@ -175,6 +185,8 @@ jobs:
 
   android:
     runs-on: ubuntu-latest
+    # Temporary: stop runaway jobs while CI is made faster.
+    timeout-minutes: 1
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4

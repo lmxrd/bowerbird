@@ -19,6 +19,8 @@ jobs:
   auto-merge:
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
+    # Temporary: stop runaway jobs while CI is made faster.
+    timeout-minutes: 1
     steps:
       - id: meta
         uses: dependabot/fetch-metadata@v2

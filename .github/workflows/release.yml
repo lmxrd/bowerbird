@@ -27,6 +27,8 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    # Temporary: stop runaway jobs while CI is made faster.
+    timeout-minutes: 1
     permissions:
       contents: write
       pull-requests: write
@@ -75,6 +77,8 @@ jobs:
           - { runner: ubuntu-latest, arch: amd64 }
           - { runner: ubuntu-24.04-arm, arch: arm64 }
     runs-on: ${{ matrix.runner }}
+    # Temporary: stop runaway jobs while CI is made faster.
+    timeout-minutes: 1
     permissions:
       contents: write
       packages: write
@@ -129,6 +133,8 @@ jobs:
   manifest:
     needs: [release-please, binaries]
     runs-on: ubuntu-latest
+    # Temporary: stop runaway jobs while CI is made faster.
+    timeout-minutes: 1
     permissions:
       packages: write
     steps:
