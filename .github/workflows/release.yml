@@ -124,6 +124,58 @@ jobs:
           path: digests/*
           if-no-files-found: error
 
+  # The desktop app's bundles (docs/M5_DESIGN.md §8), unsigned, attached
+  # to the release with their checksums: on each system's runner, from the
+  # release build (`mise run build:desktop`, as locally). macOS's runner is
+  # Apple silicon, so the .dmg is for Arm Macs. No cache: a release is
+  # rare, and CI's caches hold dev builds.
+  desktop:
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    env:
+      MISE_TASK_RUN_AUTO_INSTALL: "false"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.tag }}
+      # Tauri's system libraries (webkit2gtk 4.1, the tray's appindicator).
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: ${{ runner.os == 'macOS' && 'node pnpm rust aqua:yonaskolb/XcodeGen' || 'node pnpm rust' }}
+      - run: mise run build:desktop
+      # The files of dist/desktop: the .app is a folder, and it is in the
+      # .dmg.
+      - name: Attach to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag }}
+        run: |
+          cd dist/desktop
+          files=()
+          for f in *; do
+            [ -f "$f" ] && files+=("$f")
+          done
+          sums="SHA256SUMS-desktop-${RUNNER_OS}"
+          if command -v sha256sum >/dev/null; then
+            sha256sum -- "${files[@]}" > "$sums"
+          else
+            shasum -a 256 -- "${files[@]}" > "$sums"
+          fi
+          gh release upload "$TAG" "${files[@]}" "$sums" --clobber
+
   # The tags 1.2.3, 1.2 and latest (prereleases get only the exact
   # version), pointing at both images.
   manifest:

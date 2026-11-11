@@ -68,9 +68,11 @@ docs/                               the architecture and the prior art
 - **End-to-end smoke tests** (`packages/e2e`, Playwright): a few flows a
   real browser runs against the built image.
 
-CI runs the checks and the tests on every pull request, builds the release
-binary and the image, checks that the image becomes healthy, scans it, and
-runs the end-to-end tests against it.
+CI runs the checks and the tests on every pull request, the desktop app's
+on Linux, macOS and Windows and the mobile apps', builds the image (from a
+dev build), checks that it becomes healthy, scans it, and runs the
+end-to-end tests against it. It makes dev builds only, within 15 minutes;
+the release builds are made when a release is.
 
 ## Releases
 
@@ -79,8 +81,8 @@ Releases are automated with
 [Conventional Commits](https://www.conventionalcommits.org): `feat:` bumps
 the minor version (before 1.0), `fix:` and `perf:` the patch, and a `!`
 marks a breaking change. Every push to main updates a release pull request;
-merging it tags the release, attaches the Linux binaries and the OpenAPI
-spec, and publishes the multi-arch image to the GitHub Container Registry.
+merging it tags the release, attaches the Linux binaries, the OpenAPI
+spec and the desktop app's unsigned bundles, and publishes the multi-arch image to the GitHub Container Registry.
 
 Pull requests are squash merged, so **the title of a pull request must be a
 Conventional Commit** (`feat: ...`, `fix(auth): ...`), not the branch name

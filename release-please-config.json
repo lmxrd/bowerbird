@@ -25,6 +25,11 @@
           "type": "toml",
           "path": "Cargo.lock",
           "jsonpath": "$.package[?(@.name=='organizer')].version"
+        },
+        {
+          "type": "json",
+          "path": "packages/desktop/src-tauri/tauri.conf.json",
+          "jsonpath": "$.version"
         }
       ]
     }

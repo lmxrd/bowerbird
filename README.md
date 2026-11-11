@@ -553,10 +553,10 @@ under Settings → Devices, and is revoked when you sign out.
   server cannot be reached go once it is back. Start at login is a switch
   in Settings.
 
-There are no signed installers yet: build this system's bundles (`.app`
-and `.dmg`, `.msi` and `.exe`, or `.deb`, `.rpm` and `.AppImage`, unsigned)
-into `dist/desktop` with `mise run build:desktop` (see
-[AGENTS.md](AGENTS.md)). On macOS an unsigned app opens with right-click →
+There are no signed installers yet. Each release has the unsigned bundles
+(`.dmg` for Apple silicon Macs, `.msi` and `.exe`, `.deb`, `.rpm` and
+`.AppImage`), or build this system's into `dist/desktop` with
+`mise run build:desktop` (see [AGENTS.md](AGENTS.md)). On macOS an unsigned app opens with right-click →
 Open the first time.
 
 **On-demand folders on macOS need a signed app.** macOS loads the app's

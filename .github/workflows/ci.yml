@@ -24,19 +24,20 @@ env:
   # of mise.toml before a task.
   MISE_TASK_RUN_AUTO_INSTALL: "false"
 
-# The target: the whole run in 15 minutes. Every job runs side by side,
-# except those that wait for the spec (a minute or two), and each
-# expensive step is a job of its own, so the slowest decides the time,
-# not their sum. Rust's caches (Swatinem/rust-cache: the dependencies,
+# The target: the whole run in 15 minutes. CI verifies, it ships nothing:
+# every Rust build is a dev build, one per system (Linux, the image's
+# musl, macOS, Windows), and the release builds are release.yml's. Every
+# job runs side by side, except those that wait for the spec (a minute or
+# two), so the slowest decides the time, not their sum. Rust's caches (Swatinem/rust-cache: the dependencies,
 # not our own crates) are saved from main only, and pull requests restore
 # main's; the Xcode caches are saved when what they depend on changes.
 # The jobs stop at 30 minutes, so that a run on cold caches (the first
 # one, or after a toolchain update) still finishes and saves them: a job
 # that times out saves nothing.
 jobs:
-  # The OpenAPI spec, written once: the jobs that only need it (the image,
-  # the desktop bundles, the mobile apps) download it instead of building
-  # the backend for it. They run the tasks after gen:spec with
+  # The OpenAPI spec, written once: the jobs that only need it (the image
+  # and the mobile apps) download it instead of building the backend's dev
+  # build for it. They run the tasks after gen:spec with
   # `--skip-deps`, since mise would otherwise run gen:spec again (it keeps
   # the state of a task's sources in its own folder, which a fresh runner
   # does not have).
@@ -64,13 +65,17 @@ jobs:
 
   # The quality gates, exactly as locally: the tools come from mise.toml
   # and the checks and tests are the same tasks (the sync engine's
-  # included). The default target on the bare runner, and nothing is
-  # pushed: releases publish, CI only verifies.
+  # included), and the desktop app's on Linux, in the same build. The
+  # default target on the bare runner.
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      # Tauri's system libraries (webkit2gtk 4.1, the tray's appindicator).
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
       - uses: jdx/mise-action@v4
         with:
           install_args: node pnpm rust
@@ -80,10 +85,13 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: mise run check
       - run: mise run test
+      - run: mise run check:desktop
+      - run: mise run test:desktop
 
   # The image copies the static binary built just before it, with the
-  # same task as locally (the Dockerfile builds nothing): the release
-  # build of the backend, so CI checks that it builds. Built, never pushed.
+  # same task as locally (the Dockerfile builds nothing), from a dev build:
+  # the image is checked here, the release build is release.yml's. Built,
+  # never pushed.
   docker:
     needs: spec
     runs-on: ubuntu-latest
@@ -103,8 +111,13 @@ jobs:
       - run: mise run install:frontend
       - run: mise run --skip-deps gen:sdk
       - run: mise run --skip-deps build:frontend
+      # rust-embed reads the frontend from disk in a dev build, unless
+      # told to embed it: the image has no packages/frontend/dist.
       - run: mise run --skip-deps build:linux
-      - run: docker build -t organizer:ci .
+        env:
+          PROFILE: dev
+          FEATURES: rust-embed/debug-embed
+      - run: docker build --build-arg "BINARY=$(ls dist/organizer-linux-*-dev)" -t organizer:ci .
       # Started once, until its own HEALTHCHECK (`organizer healthcheck`) says
       # healthy, so a packaging bug fails the PR, not the release.
       - name: Run the image and check its health check
@@ -150,89 +163,44 @@ jobs:
           name: e2e-results
           path: packages/e2e/test-results
 
-  # The desktop app (docs/M5_DESIGN.md) on the three systems it ships for:
-  # its checks and tests here, its bundles in desktop-bundle beside it. On
-  # Linux the sync engine's tests are left to the checks; on macOS and
-  # Windows they run here, for the engine's code of that system.
+  # The desktop app (docs/M5_DESIGN.md) on macOS and Windows (on Linux it
+  # is in the checks): its checks, the sync engine's tests, for the engine's
+  # code of that system, and the app's. On macOS the File Provider extension
+  # and its tool too, in Debug for this runner only: CI checks that they
+  # build; the bundles are made by release.yml.
   desktop:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      # Tauri's system libraries (webkit2gtk 4.1, the tray's appindicator).
-      - if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
-      - uses: jdx/mise-action@v4
-        with:
-          install_args: node pnpm rust
-      - uses: Swatinem/rust-cache@v2
-        with:
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-      - run: mise run check:desktop
-      - if: runner.os != 'Linux'
-        run: mise run test:sync
-      - run: mise run test:desktop
-
-  # This system's unsigned bundles, from the release build, kept for a
-  # week. The macOS bundle builds the File Provider extension with XcodeGen
-  # and Xcode, whose build folder (with the Swift packages and the OpenAPI
-  # generator's plugin) is cached.
-  desktop-bundle:
-    needs: spec
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v7
-      - if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
       - uses: jdx/mise-action@v4
         with:
           install_args: ${{ runner.os == 'macOS' && 'node pnpm rust aqua:yonaskolb/XcodeGen' || 'node pnpm rust' }}
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - uses: actions/download-artifact@v8
-        with:
-          name: openapi
-          path: packages/backend/target/specs
-      # Its whole build folder (about 2 GB): with only the Swift packages
-      # cached it takes three times as long. Our own sources build again
-      # anyway (a checkout's file times are new), so the key is what the
-      # packages depend on, and a run saves only when it changes.
+      - run: mise run check:desktop
+      - run: mise run test:sync
+      - run: mise run test:desktop
+      # Xcode's build folder (the Swift packages, the OpenAPI generator's
+      # plugin and their builds). Our own sources build again anyway (a
+      # checkout's file times are new), so the key is what the packages
+      # depend on, and a run saves only when it changes.
       - if: runner.os == 'macOS'
         uses: actions/cache@v6
         with:
           path: packages/desktop/macos/build/DerivedData
-          key: fileprovider-${{ hashFiles('packages/ios/Sources/OrganizerKit/Package.swift', 'packages/desktop/macos/project.yml') }}
-          restore-keys: fileprovider-
-      # The bundlers' tools that Tauri downloads on first use (WiX and NSIS
-      # on Windows, the AppImage tools on Linux).
-      - if: runner.os != 'macOS'
-        uses: actions/cache@v6
-        with:
-          path: ${{ runner.os == 'Windows' && '~\AppData\Local\tauri' || '~/.cache/tauri' }}
-          key: tauri-tools-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: tauri-tools-${{ runner.os }}-
-      - run: mise run install:frontend
-      - run: mise run --skip-deps gen:sdk
-      - run: mise run --skip-deps build:desktop
-      - uses: actions/upload-artifact@v7
-        with:
-          name: desktop-${{ runner.os }}
-          path: dist/desktop
-          retention-days: 7
+          key: fileprovider-debug-${{ hashFiles('packages/ios/Sources/OrganizerKit/Package.swift', 'packages/desktop/macos/project.yml') }}
+          restore-keys: fileprovider-debug-
+      # The spec is there: check:desktop wrote it.
+      - if: runner.os == 'macOS'
+        run: mise run --skip-deps build:fileprovider
+        env:
+          CONFIGURATION: Debug
 
   # The mobile apps (docs/M4_DESIGN.md), each with its own tasks, from the
   # spec job's spec: their API clients are generated from it inside each
