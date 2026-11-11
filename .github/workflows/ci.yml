@@ -31,9 +31,10 @@ env:
 # two), so the slowest decides the time, not their sum. Rust's caches (Swatinem/rust-cache: the dependencies,
 # not our own crates) are saved from main only, and pull requests restore
 # main's; the Xcode caches are saved when what they depend on changes.
-# The jobs stop at 30 minutes, so that a run on cold caches (the first
-# one, or after a toolchain update) still finishes and saves them: a job
-# that times out saves nothing.
+# Each job stops at its time on cold caches (the first run, or after a
+# toolchain update), with a margin, rounded up to 5 minutes: a cold run
+# still finishes and saves its caches (a job that times out saves
+# nothing), and a hung one stops early.
 jobs:
   # The OpenAPI spec, written once: the jobs that only need it (the image,
   # the File Provider and the mobile apps) download it instead of building
@@ -43,7 +44,7 @@ jobs:
   # does not have).
   spec:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
@@ -69,7 +70,7 @@ jobs:
   # default target on the bare runner.
   checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       # Tauri's system libraries (webkit2gtk 4.1, the tray's appindicator).
@@ -98,7 +99,7 @@ jobs:
   docker:
     needs: spec
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
@@ -178,7 +179,7 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
@@ -198,7 +199,7 @@ jobs:
   fileprovider:
     needs: spec
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
@@ -227,7 +228,7 @@ jobs:
   ios:
     needs: spec
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
@@ -252,7 +253,7 @@ jobs:
   android:
     needs: spec
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
