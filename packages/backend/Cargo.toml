@@ -34,7 +34,7 @@ notify = "8.2.1"
 # the server's disk and S3-compatible backends. Already built in through
 # rustic_backend at this version, with its default features (so turning
 # them off here would build nothing less).
-opendal = { version = "0.58.2", features = ["services-fs", "services-s3", "services-webdav"] }
+opendal = { version = "0.59.5", features = ["services-fs", "services-s3", "services-webdav"] }
 # Single sign-on (src/oidc.rs). Without its default features: it would bring
 # reqwest 0.12; our own reqwest is handed to it instead.
 openidconnect = { version = "4.1.0", default-features = false }

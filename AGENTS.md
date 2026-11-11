@@ -654,12 +654,12 @@ cargo run -p organizer`, then sign in with `http://127.0.0.1:8123`.
   would run `gen:spec` again on a fresh runner. Caches (Rust's, Xcode's,
   Gradle's) are saved from main.
 - **Dependency updates and security fixes** (`.github/dependabot.yml`):
-  Dependabot's pull requests are `fix(deps)` for what ships (crates, the
-  frontend's dependencies, the base image) and `chore(deps-dev)` for the
-  frontend's devDependencies; `ci` for actions. Routine updates wait 5 days
-  (`cooldown`), security updates do not. Minor, patch and security updates
-  merge on their own once CI passes (`dependabot-auto-merge.yml`); majors
-  wait for a person. pnpm's `minimumReleaseAge` (1 day) must stay shorter
+  every routine update, of every ecosystem, comes in one weekly pull
+  request (a multi-ecosystem group), titled `fix(deps)` (a group has one
+  title); security updates come in pull requests of their own. Routine
+  updates wait 5 days (`cooldown`), security updates do not. A pull request
+  without a major update merges on its own once CI passes
+  (`dependabot-auto-merge.yml`); one with a major waits for a person. pnpm's `minimumReleaseAge` (1 day) must stay shorter
   than the cooldown. `security.yml` runs `mise run audit` and scans the
   published image every day; a finding to accept goes in
   `osv-scanner.toml` with its reason.

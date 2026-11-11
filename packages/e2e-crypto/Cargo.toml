@@ -7,7 +7,7 @@ edition = "2024"
 [dependencies]
 aes-gcm = "0.11.1"
 base32 = "0.5.1"
-base64 = "0.22.1"
+base64 = "0.23.1"
 curve25519-dalek = "5.0.0"
 hex = "0.4.3"
 hkdf = "0.13.0"
