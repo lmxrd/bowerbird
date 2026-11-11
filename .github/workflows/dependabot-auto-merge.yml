@@ -1,8 +1,10 @@
 name: Dependabot auto-merge
 
-# Dependabot's minor, patch and security updates merge on their own once the
-# required checks pass (GitHub's auto-merge, which needs "Allow auto-merge"
-# in the repository's settings). Majors wait for a person. The approval is
+# Dependabot's pull requests merge on their own once the required checks
+# pass (GitHub's auto-merge, which needs "Allow auto-merge" in the
+# repository's settings), unless one has a major update (the weekly one
+# has every ecosystem's, and fetch-metadata gives its largest): it waits
+# for a person. The approval is
 # what the ruleset's one required review asks for; it needs "Allow GitHub
 # Actions to create and approve pull requests" in the Actions settings.
 #

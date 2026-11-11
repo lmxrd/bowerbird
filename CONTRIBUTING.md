@@ -89,8 +89,9 @@ Conventional Commit** (`feat: ...`, `fix(auth): ...`), not the branch name
 GitHub fills in; a `PR title` check fails the pull request otherwise.
 `CHANGELOG.md` is written by release-please: do not edit it by hand.
 
-Dependabot proposes updates weekly; minor, patch and security updates merge
-on their own once CI passes, majors wait for a person. The repository needs
+Dependabot proposes the week's updates in one pull request, and security
+updates in their own; they merge on their own once CI passes, unless one has
+a major update, which waits for a person. The repository needs
 "Allow auto-merge" and "Allow GitHub Actions to create and approve pull
 requests" switched on in its settings.
 
