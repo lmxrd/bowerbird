@@ -26,3 +26,118 @@ reason = "minimatch 10 (fixed in 11): it comes in only through the shadcn CLI (t
 id = "RUSTSEC-2026-0459"
 ignoreUntil = 2027-02-11
 reason = "libsqlite3-sys before 0.39 bundles SQLite before 3.54, which can return stale memory when it opens a database together with a crafted -wal file of another page size. No fixed version reaches us: sqlx 0.9.0 (the newest) caps libsqlite3-sys below 0.38. It needs someone who can write Organizer's own database and -wal files in its data folder, who has the data already. A shorter expiry: look again when sqlx takes libsqlite3-sys 0.39."
+
+# zip 8 comes in only through calamine 0.36, which xberg 1.3.10 (the newest)
+# pins; organizer's own zip is 9. Every one of these is in extracting an
+# archive to disk (symlinks, permissions, entries that overwrite files):
+# calamine only reads a workbook's entries into memory, and nothing ever
+# extracts a zip to disk.
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0367"
+ignoreUntil = 2027-02-11
+reason = "zip 8 (through calamine, through xberg, the newest pins it): SUID/SGID bits kept by ZipArchive::extract. Only extraction to disk, which calamine never does: it reads a workbook's entries into memory."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0368"
+ignoreUntil = 2027-02-11
+reason = "zip 8 (through calamine, through xberg): symbolic links outside the destination from ZipArchive::extract. Only extraction to disk, which calamine never does."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0369"
+ignoreUntil = 2027-02-11
+reason = "zip 8 (through calamine, through xberg): permissions applied through symbolic links by extract. Only extraction to disk, which calamine never does."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0429"
+ignoreUntil = 2027-02-11
+reason = "zip 8 (through calamine, through xberg): extract aborts on a symbolic link with a large declared size. Only extraction, which calamine never does."
+
+[[IgnoredVulns]]
+id = "GHSA-m665-v7pm-7grj"
+ignoreUntil = 2027-02-11
+reason = "zip 8 (through calamine, through xberg): two headers that disagree let a checked archive extract to other files. It is a file overwrite on extraction, which calamine never does: it reads a workbook in memory, and xberg only takes its text."
+
+[[IgnoredVulns]]
+id = "GHSA-q7v9-x93c-xqv3"
+ignoreUntil = 2027-02-11
+reason = "zip 8 (through calamine, through xberg): unbounded symbolic link targets during extraction. Only extraction, which calamine never does."
+
+[[IgnoredVulns]]
+id = "GHSA-8hxf-qr8p-62x4"
+ignoreUntil = 2027-02-11
+reason = "zip 8 (through calamine, through xberg): an AES entry's HMAC check skipped on an early end of file. zip 8 is built without its aes-crypto feature: there is no AES code to reach."
+
+[[IgnoredVulns]]
+id = "GHSA-9hj8-73fh-9963"
+ignoreUntil = 2027-02-11
+reason = "zip 8 (through calamine, through xberg): the legacy Shrink/Reduce/Implode decoders trust a ZIP64 size. zip 8 is built without its legacy-zip feature: there are no such decoders to reach."
+
+[[IgnoredVulns]]
+id = "GHSA-hjqx-j4rw-g7xv"
+ignoreUntil = 2027-02-11
+reason = "zip 8 (through calamine, through xberg): ZipArchive::extract checks symbolic link targets lexically and can write outside its folder. Only extraction to disk, which calamine never does."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0436"
+ignoreUntil = 2027-02-11
+reason = "calamine 0.36 (fixed in 0.38): a malformed old .xls (CFB) can panic or allocate without bound. xberg 1.3.10, the newest, pins 0.36. Extraction (src/drop_box/extract.rs) runs in its own task, with a timeout and MAX_READ_BYTES, so a panic is caught; an allocation that large could still stop the server, from a file a signed-in user uploads. Take calamine 0.38 as soon as xberg does, or turn off xberg's excel feature."
+
+# rustic_backend 0.7 builds opendal 0.58 with its FTP service, whatever its
+# features: Organizer's backups go to a local path or S3 only, so the FTP
+# client (and the async runtime under it) is built in but never runs.
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0271"
+ignoreUntil = 2027-02-11
+reason = "suppaftp 8 (fixed in 10): CRLF injection in FTP commands. Built in through rustic_backend 0.7 (the newest), whose opendal always has the FTP service; Organizer's backups never use FTP."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0052"
+ignoreUntil = 2027-02-11
+reason = "async-std is discontinued (no vulnerability): only under suppaftp, the FTP client rustic_backend builds in and Organizer never uses."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0441"
+ignoreUntil = 2027-02-11
+reason = "pin-utils is unmaintained (no vulnerability): only under async-std, under the FTP client Organizer never uses."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0253"
+ignoreUntil = 2027-02-11
+reason = "lru 0.16 (fixed in 0.18.2): a use-after-free in LruCache::pop if a panic happens inside it. Through dav-server, whose newest (0.12) still asks for lru 0.16; it caches its own file metadata, where nothing panics in pop."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0387"
+ignoreUntil = 2027-02-11
+reason = "crypto-bigint 0.5 (fixed in 0.7.6): operations meant to be constant-time may not be. Through p256 0.13, which web-push-native 0.5 (the newest) pins, to sign the VAPID and APNs tokens with the server's key. Those signatures go out with push requests the server sends; no one gets to time them. Move when web-push-native takes the elliptic-curve 0.14 crates."
+
+# Tauri's Linux desktop stack (gtk 0.18 and its glib, zbus for the
+# notifications and the keyring): no newer release of Tauri leaves them.
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0429"
+ignoreUntil = 2027-02-11
+reason = "glib 0.18 (fixed in 0.20): VariantStrIter's iterators are unsound. Through gtk 0.18, under Tauri on Linux (tao, muda, the tray); neither our code nor Tauri iterates a VariantStr."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0370"
+ignoreUntil = 2027-02-11
+reason = "proc-macro-error is unmaintained (no vulnerability): a build-time macro under glib 0.18, under Tauri on Linux."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0371"
+ignoreUntil = 2027-02-11
+reason = "zbus_names is unmaintained (no vulnerability): under zbus, for the desktop app's notifications and keyring on Linux."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0370"
+ignoreUntil = 2027-02-11
+reason = "zvariant is unmaintained (no vulnerability): under zbus, for the desktop app's notifications and keyring on Linux."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0372"
+ignoreUntil = 2027-02-11
+reason = "zvariant_derive is unmaintained (no vulnerability): under zbus, for the desktop app's notifications and keyring on Linux."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0436"
+ignoreUntil = 2027-02-11
+reason = "paste is unmaintained (no vulnerability): a build-time macro, under biblatex, under xberg."
