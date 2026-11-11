@@ -5,26 +5,34 @@
 # this). Unsigned while project.yml has no team (DEVELOPMENT_TEAM): the
 # extension is then in the bundle but does not load (see project.yml).
 # Built in build/DerivedData, which is ignored by git.
+#
+#   CONFIGURATION  Release (default: the bundle's, for Arm and Intel Macs)
+#                  or Debug (this Mac's architecture only: CI checks that it
+#                  builds, in a fraction of the time)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ../../ios/scripts/spec.sh
 xcodegen generate --quiet
 
-signing=()
+configuration=${CONFIGURATION:-Release}
+settings=()
+if [[ $configuration == Debug ]]; then
+  settings+=(ARCHS="$(uname -m)")
+fi
 if grep -q 'DEVELOPMENT_TEAM: ""' project.yml; then
-  signing=(CODE_SIGNING_ALLOWED=NO)
+  settings+=(CODE_SIGNING_ALLOWED=NO)
 fi
 xcodebuild build \
   -project OrganizerFileProvider.xcodeproj \
   -scheme OrganizerFileProvider \
-  -configuration Release \
+  -configuration "$configuration" \
   -destination 'generic/platform=macOS' \
   -derivedDataPath build/DerivedData \
   -skipPackagePluginValidation \
   -quiet \
-  ${signing[@]+"${signing[@]}"}
+  ${settings[@]+"${settings[@]}"}
 
-products=build/DerivedData/Build/Products/Release
+products=build/DerivedData/Build/Products/$configuration
 rm -rf build/Products
 mkdir -p build/Products
 cp -R "$products/OrganizerFileProvider.appex" build/Products/

@@ -34,6 +34,9 @@ cargo zigbuild --profile "$profile" --features "${FEATURES:-}" --target "$triple
 target_dir=$(cargo metadata --format-version 1 --no-deps | jq -r .target_directory)
 name=organizer-linux-$arch
 [ "$profile" = release ] || name=$name-$profile
+# The dev profile's folder is `debug`; every other profile's is its name.
+out=$profile
+[ "$profile" = dev ] && out=debug
 mkdir -p ../../dist
-cp "$target_dir/$triple/$profile/organizer" "../../dist/$name"
+cp "$target_dir/$triple/$out/organizer" "../../dist/$name"
 echo "dist/$name"

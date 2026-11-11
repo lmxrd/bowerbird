@@ -390,6 +390,7 @@ the macOS File Provider extension and its tool (Swift, XcodeGen).
 | `mise run fix:desktop` | cargo fmt, oxfmt and oxlint --fix |
 | `mise run dev:desktop` | The app, rebuilt as its code changes (`tauri dev`; the window's dev server on :5174) |
 | `mise run build:desktop` | This system's bundles, unsigned, into `dist/desktop` (`scripts/desktop-bundles.mjs` copies them out of the target directory). On a Mac it first builds the File Provider extension and its tool (`packages/desktop/macos/scripts/build.sh`, XcodeGen and xcodebuild, from Tauri's `beforeBundleCommand` in `src-tauri/tauri.macos.conf.json`, which copies them into the bundle). On a Mac the `.dmg`'s layout is set through Finder (AppleScript); where that is not allowed (a sandbox, a session without Finder automation), `CI=true` skips it |
+| `mise run build:fileprovider` | The File Provider extension and its tool on their own (macOS); `CONFIGURATION=Debug` builds this Mac's architecture only, as CI does |
 
 The app's tasks are not in `check` and `test`: on Linux they need Tauri's
 system libraries (webkit2gtk 4.1 and the rest, see the CI job). Try the
@@ -644,6 +645,14 @@ cargo run -p organizer`, then sign in with `http://127.0.0.1:8123`.
   `OCM_KEY_FILE`, `FEDERATION_ALLOW_PRIVATE`, `RUST_LOG`; listed in the
   README). Everything user-facing is stored in the database. A new variable
   goes in the README's table.
+- **CI** (`ci.yml`) verifies and ships nothing: dev builds only, one per
+  system (Linux, the image's musl, macOS, Windows), every job side by side,
+  for a whole run within 15 minutes. Release builds, the desktop bundles
+  included, are `release.yml`'s, on a release. The jobs that need only the
+  OpenAPI spec download it from the `spec` job and run their tasks with
+  `mise run --skip-deps <task>` (the flag before the task), since mise
+  would run `gen:spec` again on a fresh runner. Caches (Rust's, Xcode's,
+  Gradle's) are saved from main.
 - **Dependency updates and security fixes** (`.github/dependabot.yml`):
   Dependabot's pull requests are `fix(deps)` for what ships (crates, the
   frontend's dependencies, the base image) and `chore(deps-dev)` for the

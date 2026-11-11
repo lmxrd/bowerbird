@@ -82,3 +82,22 @@ let settingsJSON = """
 func compact(_ body: Data?) -> String {
   String(decoding: body ?? Data(), as: UTF8.self).filter { !$0.isWhitespace }
 }
+
+/// A request's body as a URLProtocol stub gets it: the generated client
+/// streams it from another thread, so the stream is read until it ends,
+/// not while it has bytes (on a busy machine it has none yet when the stub
+/// starts, and the body came through empty).
+func requestBody(_ request: URLRequest) -> Data {
+  if let body = request.httpBody { return body }
+  guard let stream = request.httpBodyStream else { return Data() }
+  stream.open()
+  defer { stream.close() }
+  var body = Data()
+  var buffer = [UInt8](repeating: 0, count: 64 * 1024)
+  while true {
+    let read = stream.read(&buffer, maxLength: buffer.count)
+    if read <= 0 { break }
+    body.append(buffer, count: read)
+  }
+  return body
+}

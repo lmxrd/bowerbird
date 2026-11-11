@@ -18,7 +18,9 @@ watchexec = "2.8.0"
 # The mobile apps (packages/ios, packages/android): XcodeGen makes the Xcode
 # project from project.yml; the JDK runs Gradle (its own version is the
 # committed wrapper's).
-"aqua:yonaskolb/XcodeGen" = "2.46.0"
+# macOS only: it has no Linux or Windows build, and mise would fail
+# to install it there.
+"aqua:yonaskolb/XcodeGen" = { version = "2.46.0", os = ["macos"] }
 java = "temurin-25.0.5+8.0.LTS"
 
 # ---------------------------------------------------------------------------
@@ -400,6 +402,15 @@ run = [
   "cargo test -p organizer-desktop",
   "pnpm --dir packages/desktop run test",
 ]
+
+# The File Provider extension and its tool on their own (build:desktop
+# builds them for the bundle). CONFIGURATION=Debug builds this Mac's
+# architecture only, as CI does to check that they build.
+[tasks."build:fileprovider"]
+description = "Build the macOS File Provider extension and its tool (CONFIGURATION=Debug: this Mac only)"
+depends = ["gen:spec"]
+run = "bash macos/scripts/build.sh"
+dir = "{{ config_root }}/packages/desktop"
 
 # `tauri dev` starts the window's dev server (:5174) itself.
 [tasks."dev:desktop"]

@@ -94,17 +94,7 @@ final class StubProtocol: URLProtocol {
   override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
   override func startLoading() {
-    var body = request.httpBody ?? Data()
-    if body.isEmpty, let stream = request.httpBodyStream {
-      stream.open()
-      var buffer = [UInt8](repeating: 0, count: 64 * 1024)
-      while stream.hasBytesAvailable {
-        let read = stream.read(&buffer, maxLength: buffer.count)
-        if read <= 0 { break }
-        body.append(buffer, count: read)
-      }
-      stream.close()
-    }
+    let body = requestBody(request)
     switch FakeServer.current.handle(request, body: body) {
     case .breakOff:
       client?.urlProtocol(self, didFailWithError: URLError(.networkConnectionLost))

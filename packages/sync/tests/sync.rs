@@ -1003,6 +1003,10 @@ async fn a_fetch_sends_a_range_of_the_version_a_placeholder_shows() {
     assert!(fetch(identity, 0, 4096).await.unwrap().is_err());
 }
 
+// Not on Windows: there the engine always has the system's placeholders
+// (Cloud Files, when the config gives none) and keeps the folder itself, as
+// the tests with the fake placeholders check.
+#[cfg(not(windows))]
 #[tokio::test]
 async fn an_on_demand_folder_without_placeholders_is_left_to_the_system() {
     // macOS: the File Provider extension keeps it; the engine only lists it.

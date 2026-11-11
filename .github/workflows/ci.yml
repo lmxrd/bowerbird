@@ -8,62 +8,120 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same pull request cancels the run still going; on
+# main every push runs to the end (its caches are the ones kept).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # CI builds once: no incremental state, and no debug info in debug and
+  # test builds. Smaller target directories, so smaller caches (the
+  # repository has 10 GB in all) and faster links.
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  # mise installs only the tools a job names (install_args), not every tool
+  # of mise.toml before a task.
+  MISE_TASK_RUN_AUTO_INSTALL: "false"
+
+# The target: the whole run in 15 minutes. CI verifies, it ships nothing:
+# every Rust build is a dev build, one per system (Linux, the image's
+# musl, macOS, Windows), and the release builds are release.yml's. Every
+# job runs side by side, except those that wait for the spec (a minute or
+# two), so the slowest decides the time, not their sum. Rust's caches (Swatinem/rust-cache: the dependencies,
+# not our own crates) are saved from main only, and pull requests restore
+# main's; the Xcode caches are saved when what they depend on changes.
+# Each job stops at its time on cold caches (the first run, or after a
+# toolchain update), with a margin, rounded up to 5 minutes: a cold run
+# still finishes and saves its caches (a job that times out saves
+# nothing), and a hung one stops early.
 jobs:
+  # The OpenAPI spec, written once: the jobs that only need it (the image,
+  # the File Provider and the mobile apps) download it instead of building
+  # the backend's dev build for it. They run the tasks after gen:spec with
+  # `--skip-deps`, since mise would otherwise run gen:spec again (it keeps
+  # the state of a task's sources in its own folder, which a fresh runner
+  # does not have).
+  spec:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: rust
+      # The checks' cache, which has every dependency of the backend's dev
+      # build; saved by the checks.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: linux-dev
+          save-if: false
+      - run: mise run gen:spec
+      - uses: actions/upload-artifact@v7
+        with:
+          name: openapi
+          path: packages/backend/target/specs/openapi.json
+          if-no-files-found: error
+          retention-days: 1
+
   # The quality gates, exactly as locally: the tools come from mise.toml
-  # and the checks and tests are the same tasks. The default target on
-  # the bare runner — no matrix, no cross compiling — and nothing is
-  # pushed: releases publish, CI only verifies.
+  # and the checks and tests are the same tasks (the sync engine's
+  # included), and the desktop app's on Linux, in the same build. The
+  # default target on the bare runner.
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
+      # Tauri's system libraries (webkit2gtk 4.1, the tray's appindicator).
+      # Ubuntu's mirrors fail now and then: retried, and stopped at 10
+      # minutes rather than hanging until the job's own limit.
+      - timeout-minutes: 10
+        run: |
+          sudo apt-get -o Acquire::Retries=3 update
+          sudo apt-get -o Acquire::Retries=3 install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
       - uses: jdx/mise-action@v4
-      - uses: actions/cache@v6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-${{ runner.arch }}-cargo-check-${{ hashFiles('Cargo.lock') }}
+          install_args: node pnpm rust
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: linux-dev
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: mise run check
       - run: mise run test
-
-  # The builds run in parallel once the checks pass: the release build,
-  # and the image. Separate cache keys, since the checks cache a debug
-  # target directory and this one a release one.
-  build:
-    needs: checks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
-      - uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-${{ runner.arch }}-cargo-build-${{ hashFiles('Cargo.lock') }}
-      - run: mise run build
+      - run: mise run check:desktop
+      - run: mise run test:desktop
 
   # The image copies the static binary built just before it, with the
-  # same task and cargo cache as locally (the Dockerfile builds nothing).
-  # Built, never pushed.
+  # same task as locally (the Dockerfile builds nothing), from a dev build:
+  # the image is checked here, the release build is release.yml's. Built,
+  # never pushed.
   docker:
-    needs: checks
+    needs: spec
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
-      - uses: actions/cache@v6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-${{ runner.arch }}-cargo-linux-${{ hashFiles('Cargo.lock') }}
-      - run: mise run build:linux
-      - run: docker build -t organizer:ci .
+          install_args: node pnpm rust zig github:rust-cross/cargo-zigbuild aqua:aquasecurity/trivy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: openapi
+          path: packages/backend/target/specs
+      - run: mise run install:frontend
+      - run: mise run --skip-deps gen:sdk
+      - run: mise run --skip-deps build:frontend
+      # rust-embed reads the frontend from disk in a dev build, unless
+      # told to embed it: the image has no packages/frontend/dist.
+      - run: mise run --skip-deps build:linux
+        env:
+          PROFILE: dev
+          FEATURES: rust-embed/debug-embed
+      - run: docker build --build-arg "BINARY=$(ls dist/organizer-linux-*-dev)" -t organizer:ci .
       # Started once, until its own HEALTHCHECK (`organizer healthcheck`) says
       # healthy, so a packaging bug fails the PR, not the release.
       - name: Run the image and check its health check
@@ -92,14 +150,15 @@ jobs:
       # The end-to-end smoke tests (packages/e2e): a real browser against this
       # image, on a fresh database. Only Chromium, cached by Playwright's
       # version (its system libraries are installed every time).
-      - run: mise run install:frontend
       - id: playwright
         run: echo "version=$(jq -r '.devDependencies["@playwright/test"]' packages/e2e/package.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - run: pnpm --filter organizer-e2e exec playwright install --with-deps chromium
+      # Its system libraries come from Ubuntu's mirrors too (see checks).
+      - timeout-minutes: 10
+        run: pnpm --filter organizer-e2e exec playwright install --with-deps chromium
       - run: scripts/e2e.sh
         env:
           CONTAINER: docker
@@ -110,87 +169,102 @@ jobs:
           name: e2e-results
           path: packages/e2e/test-results
 
-  # The mobile apps (docs/M4_DESIGN.md), each with its own tasks: the spec
-  # is written first (gen:spec, a backend build), then the API clients are
-  # generated from it inside each app's build.
-  ios:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
-      - uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-${{ runner.arch }}-cargo-spec-${{ hashFiles('Cargo.lock') }}
-      - run: mise run check:ios
-      - run: mise run build:ios
-      - run: mise run test:ios
-
-  # The desktop app (docs/M5_DESIGN.md) on the three systems it ships for:
-  # its checks, the sync engine's tests (the backend in-process) and the
-  # app's, and this system's unsigned bundles, kept for a week.
+  # The desktop app (docs/M5_DESIGN.md) on macOS and Windows (on Linux it
+  # is in the checks): its checks, the sync engine's tests, for the engine's
+  # code of that system, and the app's. The bundles are made by
+  # release.yml.
   desktop:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    # mise would otherwise install every tool of mise.toml before a task.
-    env:
-      MISE_TASK_RUN_AUTO_INSTALL: "false"
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
-      # Tauri's system libraries (webkit2gtk 4.1, the tray's appindicator).
-      - if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
-      # Only the tools the desktop app needs: the others (XcodeGen, the JDK,
-      # zig) are for the mobile apps and the Linux image.
       - uses: jdx/mise-action@v4
         with:
           install_args: node pnpm rust
-      # The macOS bundle builds the File Provider extension with XcodeGen.
-      - if: runner.os == 'macOS'
-        run: mise install aqua:yonaskolb/XcodeGen
-      - uses: actions/cache@v6
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-${{ runner.arch }}-cargo-desktop-${{ hashFiles('Cargo.lock') }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: mise run check:desktop
       - run: mise run test:sync
       - run: mise run test:desktop
-      - run: mise run build:desktop
-      - uses: actions/upload-artifact@v7
-        with:
-          name: desktop-${{ runner.os }}
-          path: dist/desktop
-          retention-days: 7
 
-  android:
-    runs-on: ubuntu-latest
+  # The desktop app's File Provider extension and its tool (macOS), beside
+  # the desktop job rather than after it: in Debug, for this runner only,
+  # from the spec job's spec. CI checks that they build; release.yml builds
+  # them for the bundle.
+  fileprovider:
+    needs: spec
+    runs-on: macos-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v4
+        with:
+          install_args: aqua:yonaskolb/XcodeGen
+      - uses: actions/download-artifact@v8
+        with:
+          name: openapi
+          path: packages/backend/target/specs
+      # Xcode's build folder (the Swift packages, the OpenAPI generator's
+      # plugin and their builds). Our own sources build again anyway (a
+      # checkout's file times are new), so the key is what the packages
+      # depend on, and a run saves only when it changes.
       - uses: actions/cache@v6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-${{ runner.arch }}-cargo-spec-${{ hashFiles('Cargo.lock') }}
+          path: packages/desktop/macos/build/DerivedData
+          key: fileprovider-debug-${{ hashFiles('packages/ios/Sources/OrganizerKit/Package.swift', 'packages/desktop/macos/project.yml') }}
+          restore-keys: fileprovider-debug-
+      - run: mise run --skip-deps build:fileprovider
+        env:
+          CONFIGURATION: Debug
+
+  # The mobile apps (docs/M4_DESIGN.md), each with its own tasks, from the
+  # spec job's spec: their API clients are generated from it inside each
+  # app's build, and neither needs Rust.
+  ios:
+    needs: spec
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: aqua:yonaskolb/XcodeGen
+      - uses: actions/download-artifact@v8
+        with:
+          name: openapi
+          path: packages/backend/target/specs
+      # Xcode's build folder: the Swift packages, the OpenAPI generator's
+      # plugin and their builds, which otherwise take most of the job.
       - uses: actions/cache@v6
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('packages/android/gradle/libs.versions.toml', 'packages/android/gradle/wrapper/gradle-wrapper.properties') }}
-      - run: mise run check:android
-      - run: mise run build:android
-      - run: mise run test:android
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ios-${{ hashFiles('packages/ios/Sources/OrganizerKit/Package.swift', 'packages/ios/project.yml') }}
+          restore-keys: ios-
+      - run: mise run check:ios
+      - run: mise run --skip-deps gen:ios
+      - run: mise run --skip-deps build:ios
+      - run: mise run --skip-deps test:ios
+
+  android:
+    needs: spec
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: java
+      - uses: actions/download-artifact@v8
+        with:
+          name: openapi
+          path: packages/backend/target/specs
+      # Gradle's caches and wrapper, written from main only.
+      - uses: gradle/actions/setup-gradle@v6
+      - run: mise run --skip-deps check:android
+      - run: mise run --skip-deps build:android
+      - run: mise run --skip-deps test:android
