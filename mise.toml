@@ -18,7 +18,9 @@ watchexec = "2.8.0"
 # The mobile apps (packages/ios, packages/android): XcodeGen makes the Xcode
 # project from project.yml; the JDK runs Gradle (its own version is the
 # committed wrapper's).
-"aqua:yonaskolb/XcodeGen" = "2.46.0"
+# macOS only: it has no Linux or Windows build, and mise would fail
+# to install it there.
+"aqua:yonaskolb/XcodeGen" = { version = "2.46.0", os = ["macos"] }
 java = "temurin-25.0.5+8.0.LTS"
 
 # ---------------------------------------------------------------------------

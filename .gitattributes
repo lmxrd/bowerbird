@@ -1,0 +1,8 @@
+# LF everywhere, on every system: on Windows git would otherwise check text
+# out with CRLF, and oxfmt and rustfmt --check then fail on every file.
+* text=auto eol=lf
+# Binaries, never converted.
+*.png binary
+*.ico binary
+*.icns binary
+*.jar binary
