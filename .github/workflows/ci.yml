@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v5
         with:
           install_args: rust
       # The checks' cache, which has every dependency of the backend's dev
@@ -80,7 +80,7 @@ jobs:
         run: |
           sudo apt-get -o Acquire::Retries=3 update
           sudo apt-get -o Acquire::Retries=3 install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v5
         with:
           install_args: node pnpm rust
       - uses: Swatinem/rust-cache@v2
@@ -102,7 +102,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v5
         with:
           install_args: node pnpm rust zig github:rust-cross/cargo-zigbuild aqua:aquasecurity/trivy
       - uses: Swatinem/rust-cache@v2
@@ -182,7 +182,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v5
         with:
           install_args: node pnpm rust
       - uses: Swatinem/rust-cache@v2
@@ -202,7 +202,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v5
         with:
           install_args: aqua:yonaskolb/XcodeGen
       - uses: actions/download-artifact@v8
@@ -231,7 +231,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v5
         with:
           install_args: aqua:yonaskolb/XcodeGen
       - uses: actions/download-artifact@v8
@@ -256,7 +256,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v4
+      - uses: jdx/mise-action@v5
         with:
           install_args: java
       - uses: actions/download-artifact@v8
