@@ -82,7 +82,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: linux-dev
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref == 'refs/heads/main' || github.head_ref == 'ci/faster' }} # TEMP: warm runs on PR #5
       - run: mise run check
       - run: mise run test
       - run: mise run check:desktop
@@ -103,7 +103,7 @@ jobs:
           install_args: node pnpm rust zig github:rust-cross/cargo-zigbuild aqua:aquasecurity/trivy
       - uses: Swatinem/rust-cache@v2
         with:
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref == 'refs/heads/main' || github.head_ref == 'ci/faster' }} # TEMP: warm runs on PR #5
       - uses: actions/download-artifact@v8
         with:
           name: openapi
@@ -182,7 +182,7 @@ jobs:
           install_args: ${{ runner.os == 'macOS' && 'node pnpm rust aqua:yonaskolb/XcodeGen' || 'node pnpm rust' }}
       - uses: Swatinem/rust-cache@v2
         with:
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref == 'refs/heads/main' || github.head_ref == 'ci/faster' }} # TEMP: warm runs on PR #5
       - run: mise run check:desktop
       - run: mise run test:sync
       - run: mise run test:desktop
