@@ -79,7 +79,11 @@ async fn server() -> Server {
         .unwrap();
     let state = AppState {
         oidc: Arc::new(organizer::oidc::Oidc::load(&db, organizer::oidc::Env::default()).await),
-        files: organizer::files::Files::new(db.clone(), data.clone(), None),
+        files: organizer::files::Files::new(
+            db.clone(),
+            data.clone(),
+            organizer::config::FilesDir::Local(data.clone().join("files")),
+        ),
         db: db.clone(),
         trust_proxy: false,
         swagger_ui: false,

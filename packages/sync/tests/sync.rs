@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 struct Server {
     state: AppState,
-    /// The server's files folder (`FILES_DIR`): its tree, on disk.
+    /// The user's tree on the server's disk (the default root under FILES_DIR).
     files: PathBuf,
     /// Through the proxy, which `offline` cuts.
     url: String,
@@ -34,12 +34,16 @@ struct Server {
 async fn server() -> Server {
     organizer::install_tls_provider();
     let dir = std::env::temp_dir().join(format!("organizer-sync-{}", Uuid::new_v4().simple()));
-    let files = dir.join("server-files");
-    std::fs::create_dir_all(&files).unwrap();
+    let base = dir.join("server-files");
+    std::fs::create_dir_all(&base).unwrap();
     let db = organizer::db::open(":memory:").await.unwrap();
     let state = AppState {
         oidc: Arc::new(organizer::oidc::Oidc::load(&db, organizer::oidc::Env::default()).await),
-        files: organizer::files::Files::new(db.clone(), dir.join("data"), Some(files.clone())),
+        files: organizer::files::Files::new(
+            db.clone(),
+            dir.join("data"),
+            organizer::config::FilesDir::Local(base.clone()),
+        ),
         db: db.clone(),
         trust_proxy: false,
         swagger_ui: false,
@@ -104,6 +108,9 @@ async fn server() -> Server {
         .fetch_one(state.db.reader())
         .await
         .unwrap();
+    // The user's tree: the default root under the files base.
+    let files = state.files.default_root(user);
+    std::fs::create_dir_all(&files).unwrap();
     Server {
         state,
         files,

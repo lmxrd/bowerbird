@@ -413,6 +413,62 @@ impl Backends {
         Ok(id)
     }
 
+    /// The global backend of an `s3://` `FILES_DIR` (the `FILES_S3_*`
+    /// variables), made or updated at start; its id, so that new drives are
+    /// made in the bucket.
+    pub async fn ensure_files_backend(&self, bucket: &str, prefix: &str) -> Result<Uuid, String> {
+        let endpoint = crate::config::files_s3_endpoint()?;
+        let region = crate::config::files_s3_region();
+        let access_key = crate::config::files_s3_access_key()?;
+        let secret = self
+            .seal(&crate::config::files_s3_secret_key()?)
+            .map_err(|e| e.to_string())?;
+        let existing: Option<Uuid> =
+            sqlx::query_scalar("SELECT id FROM backends WHERE owner_id IS NULL AND name = 'files'")
+                .fetch_optional(self.db.reader())
+                .await
+                .map_err(|e| e.to_string())?;
+        let id = match existing {
+            Some(id) => {
+                sqlx::query(
+                    "UPDATE backends SET endpoint = ?2, region = ?3, bucket = ?4, prefix = ?5,
+                       access_key = ?6, secret = ?7, list_every = 3600 WHERE id = ?1",
+                )
+                .bind(id)
+                .bind(&endpoint)
+                .bind(&region)
+                .bind(bucket)
+                .bind(prefix)
+                .bind(&access_key)
+                .bind(&secret)
+                .execute(self.db.writer())
+                .await
+                .map_err(|e| e.to_string())?;
+                id
+            }
+            None => {
+                let id = Uuid::now_v7();
+                sqlx::query(
+                    "INSERT INTO backends (id, owner_id, kind, name, endpoint, region, bucket,
+                       prefix, access_key, secret, make_drives, list_every)
+                     VALUES (?1, NULL, 's3', 'files', ?2, ?3, ?4, ?5, ?6, ?7, 'everyone', 3600)",
+                )
+                .bind(id)
+                .bind(&endpoint)
+                .bind(&region)
+                .bind(bucket)
+                .bind(prefix)
+                .bind(&access_key)
+                .bind(&secret)
+                .execute(self.db.writer())
+                .await
+                .map_err(|e| e.to_string())?;
+                id
+            }
+        };
+        Ok(id)
+    }
+
     /// Whether an endpoint may be used: https and a public address for a
     /// user's own backend (names are checked again when resolved), unless
     /// `BACKENDS_ALLOW_PRIVATE`. The superadmin's may be anywhere.

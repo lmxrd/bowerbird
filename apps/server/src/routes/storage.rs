@@ -1,5 +1,5 @@
-//! Where the user's files are: the files root (docs/M1_DESIGN.md §4). Set at
-//! setup, changed here by a superadmin, or locked by `FILES_DIR`.
+//! Where the user's files are: the files root (docs/M1_DESIGN.md §4). The
+//! default is under `FILES_DIR`; set at setup, changed here by a superadmin.
 
 use crate::error::{ErrorBody, HttpError};
 use crate::extract::ApiJson;
@@ -22,15 +22,13 @@ pub fn superadmin_router() -> OpenApiRouter<AppState> {
 pub struct Storage {
     /// The absolute path of the files folder on the server.
     pub files_root: String,
-    /// Whether it is the default, a folder in the data dir.
+    /// Whether it is the default, a folder under `FILES_DIR`.
     pub default: bool,
-    /// Whether `FILES_DIR` sets it, so that it cannot be changed here.
-    pub locked: bool,
     /// Whether the folder is there: false for a share that is not mounted.
     pub available: bool,
 }
 
-/// The files folder to use; null for the default in the data dir.
+/// The files folder to use; null for the default under `FILES_DIR`.
 #[derive(Deserialize, ToSchema)]
 pub struct SetStorage {
     /// An absolute path on the server, of an existing folder Organizer can
@@ -48,7 +46,6 @@ pub(crate) async fn storage(state: &AppState, user_id: uuid::Uuid) -> Result<Sto
     let root = state.files.root_for(user_id, &stored);
     Ok(Storage {
         default: root == state.files.default_root(user_id),
-        locked: state.files.root_locked(&stored),
         available: root.is_dir(),
         files_root: root.to_string_lossy().into_owned(),
     })

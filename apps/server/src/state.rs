@@ -68,7 +68,11 @@ impl AppState {
         );
         Self {
             push,
-            files: Files::new(db.clone(), data_dir, None),
+            files: Files::new(
+                db.clone(),
+                data_dir.clone(),
+                crate::config::files_dir(&data_dir).expect("a valid FILES_DIR in the tests"),
+            ),
             db,
             public_url: None,
             secure_cookies: false,

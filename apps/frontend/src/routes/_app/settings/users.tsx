@@ -334,13 +334,12 @@ function FolderDialog({ user, onClose }: { user: UserEntry; onClose: () => void 
       onClose();
     },
   });
-  const locked = user.files.locked;
   return (
     <FormDialog
       title="Files folder"
       description={`Where the files of ${user.email} are. Organizer indexes it where it is and copies nothing; changing it indexes the new folder from scratch.`}
       action="Save"
-      pending={save.isPending || locked}
+      pending={save.isPending}
       error={save.error}
       onSubmit={() =>
         save.mutate({ path: { id: user.id }, body: { files_root: path.trim() || null } })
@@ -350,15 +349,13 @@ function FolderDialog({ user, onClose }: { user: UserEntry; onClose: () => void 
       <SettingField
         id="files-root"
         label="Path on the server"
-        lockedBy={locked ? "FILES_DIR" : undefined}
-        description="Empty for their own folder in the data folder. Never another user's folder."
+        description="Empty for their own folder under FILES_DIR. Never another user's folder."
       >
         <Input
           id="files-root"
           placeholder={user.files.default ? user.files.files_root : "/mnt/nas/files"}
           value={path}
           onChange={(e) => setPath(e.target.value)}
-          disabled={locked}
           autoFocus
         />
       </SettingField>

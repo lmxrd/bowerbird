@@ -361,31 +361,26 @@ impl Backup {
         let db = sqlx::SqlitePool::connect_with(options)
             .await
             .map_err(source_error)?;
-        let row: Option<(Uuid, Option<String>, bool)> = sqlx::query_as(
-            "SELECT id, files_root, owns_files_dir FROM users WHERE email = ?1 COLLATE NOCASE",
-        )
-        .bind(email)
-        .fetch_optional(&db)
-        .await
-        .map_err(source_error)?;
-        let (user, stored_root, owns_files_dir) =
+        let row: Option<(Uuid, Option<String>)> =
+            sqlx::query_as("SELECT id, files_root FROM users WHERE email = ?1 COLLATE NOCASE")
+                .bind(email)
+                .fetch_optional(&db)
+                .await
+                .map_err(source_error)?;
+        let (user, stored_root) =
             row.ok_or_else(|| ToolError::Usage(format!("No user {email} in that database")))?;
         let files_root = match (files_dir, stored_root) {
             (Some(dir), _) => dir.to_path_buf(),
             (None, Some(root)) => PathBuf::from(root),
             (None, None) => data_dir
                 .ok_or_else(|| ToolError::Usage("Give the data folder with --data-dir".into()))?
+                .join("files")
                 .join("users")
                 .join(user.to_string())
                 .join("files"),
         };
         if !files_root.is_dir() {
-            // The first admin's files are in FILES_DIR when it is set.
-            let hint = if owns_files_dir {
-                "give FILES_DIR's folder with --files-dir"
-            } else {
-                "give it with --files-dir"
-            };
+            let hint = "give FILES_DIR's folder with --files-dir";
             return Err(ToolError::Usage(format!(
                 "No files folder at {} ({hint})",
                 files_root.display()

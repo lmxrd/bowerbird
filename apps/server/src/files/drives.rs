@@ -171,6 +171,18 @@ impl Files {
     ) -> Result<Uuid, FileError> {
         let name = clean_name(name)?;
         let id = Uuid::now_v7();
+        // An s3:// FILES_DIR: drives are made in the bucket by default,
+        // unless a folder on the server is chosen for this one.
+        let backend = match backend {
+            Some(backend) => Some(backend),
+            None if root.is_none() => sqlx::query_scalar::<_, String>(
+                "SELECT json_extract(value, '$') FROM server_settings WHERE key = 'files_backend'",
+            )
+            .fetch_optional(self.db.reader())
+            .await?
+            .and_then(|id| Uuid::parse_str(&id).ok()),
+            None => None,
+        };
         let root = match root {
             Some(_) if backend.is_some() => {
                 return Err(FileError::Invalid(

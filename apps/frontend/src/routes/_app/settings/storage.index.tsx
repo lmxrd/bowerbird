@@ -5,7 +5,6 @@ import {
   CircleAlertIcon,
   CircleCheckIcon,
   FlaskConicalIcon,
-  LockIcon,
   PencilIcon,
   PlusIcon,
   Trash2Icon,
@@ -174,15 +173,8 @@ function FilesFolderCard() {
               placeholder={data.default ? data.files_root : "/mnt/nas/files"}
               value={path}
               onChange={(e) => setPath(e.target.value)}
-              disabled={data.locked}
             />
-            {data.locked ? (
-              <FieldDescription>
-                <LockIcon className="inline size-3" /> Set by FILES_DIR.
-              </FieldDescription>
-            ) : (
-              <FieldDescription>Empty for the default, in the data folder.</FieldDescription>
-            )}
+            <FieldDescription>Empty for the default, under FILES_DIR.</FieldDescription>
             {save.isError && <FieldError>{errorMessage(save.error)}</FieldError>}
           </Field>
           <p
@@ -195,16 +187,14 @@ function FilesFolderCard() {
             )}
             {data.available ? "Available" : "Not available: is the share mounted?"}
           </p>
-          {!data.locked && (
-            <Button
-              variant="outline"
-              className="self-start"
-              disabled={save.isPending}
-              onClick={() => save.mutate({ body: { files_root: path.trim() || null } })}
-            >
-              Save
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            className="self-start"
+            disabled={save.isPending}
+            onClick={() => save.mutate({ body: { files_root: path.trim() || null } })}
+          >
+            Save
+          </Button>
         </div>
       )}
     </SettingsCard>

@@ -23,6 +23,7 @@ pub mod shares;
 pub mod versions;
 mod watch;
 
+use crate::config::FilesDir;
 use crate::db::Db;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -254,9 +255,11 @@ pub struct Files {
     /// One lock per upload in progress: its requests take turns.
     pub(crate) upload_locks: Mutex<HashMap<Uuid, Arc<tokio::sync::Mutex<()>>>>,
     data_dir: PathBuf,
-    /// `FILES_DIR`: the files root of the first superadmin (`owns_files_dir`),
-    /// which then cannot be changed in the settings.
-    files_dir: Option<PathBuf>,
+    /// `FILES_DIR`: the base of the file content — a local path (default
+    /// `<DATA_DIR>/files`), or an `s3://` URL whose drives live in the
+    /// bucket. Scratch (uploads, the drop box) is always local: under
+    /// `FILES_DIR` when it is a path, under the data dir when it is S3.
+    files_dir: FilesDir,
     trees: Mutex<HashMap<Uuid, Arc<Tree>>>,
     /// Watch the trees and scan them on a timer: off in the tests, which
     /// scan when they want to.
@@ -300,16 +303,16 @@ impl Topic {
 }
 
 impl Files {
-    pub fn new(db: Db, data_dir: PathBuf, files_dir: Option<PathBuf>) -> Arc<Self> {
+    pub fn new(db: Db, data_dir: PathBuf, files_dir: FilesDir) -> Arc<Self> {
         Self::make(db, data_dir, files_dir, false)
     }
 
     /// The service the server runs: trees are watched and rescanned.
-    pub fn with_background(db: Db, data_dir: PathBuf, files_dir: Option<PathBuf>) -> Arc<Self> {
+    pub fn with_background(db: Db, data_dir: PathBuf, files_dir: FilesDir) -> Arc<Self> {
         Self::make(db, data_dir, files_dir, true)
     }
 
-    fn make(db: Db, data_dir: PathBuf, files_dir: Option<PathBuf>, background: bool) -> Arc<Self> {
+    fn make(db: Db, data_dir: PathBuf, files_dir: FilesDir, background: bool) -> Arc<Self> {
         Arc::new(Files {
             backends: Arc::new(crate::backends::Backends::new(db.clone(), data_dir.clone())),
             federation: Arc::new(crate::federation::Federation::new(
@@ -388,9 +391,15 @@ impl Files {
         *self.retention_env.lock().expect("not poisoned") = env;
     }
 
-    /// Where uploads are written before they are moved into a tree.
+    /// Where uploads are written before they are moved into a tree (local
+    /// scratch, even when the drives are in a bucket).
     pub fn uploads_dir(&self) -> PathBuf {
-        self.data_dir.join("uploads")
+        self.local_base().join("uploads")
+    }
+
+    /// Where a drop-box item's file is staged (local scratch too).
+    pub fn inbox_dir(&self, user_id: Uuid) -> PathBuf {
+        self.local_base().join("inbox").join(user_id.to_string())
     }
 
     pub fn db(&self) -> &Db {
@@ -411,46 +420,43 @@ impl Files {
         &self.data_dir
     }
 
-    /// `FILES_DIR`, when it is set.
-    pub fn files_dir(&self) -> Option<&Path> {
-        self.files_dir.as_deref()
+    /// `FILES_DIR`: the base of the file content.
+    pub fn files_dir(&self) -> &FilesDir {
+        &self.files_dir
     }
 
-    /// Where a user's tree is: `FILES_DIR` for the first superadmin (the
-    /// row's `owns_files_dir`), else the stored root, else the default in
-    /// the data dir.
-    pub fn root_for(&self, user_id: Uuid, stored: &StoredRoot) -> PathBuf {
-        if let Some(dir) = &self.files_dir
-            && stored.owns_files_dir
-        {
-            return dir.clone();
+    /// The local base: `FILES_DIR` when it is a path, else the data dir
+    /// (trees are in the bucket then; this is only for the scratch).
+    pub fn local_base(&self) -> &Path {
+        match &self.files_dir {
+            FilesDir::Local(path) => path,
+            FilesDir::S3 { .. } => &self.data_dir,
         }
+    }
+
+    /// Where a user's tree is: the root chosen in the settings, else the
+    /// default under `FILES_DIR`.
+    pub fn root_for(&self, user_id: Uuid, stored: &StoredRoot) -> PathBuf {
         match &stored.files_root {
             Some(root) => PathBuf::from(root),
             None => self.default_root(user_id),
         }
     }
 
-    /// Whether `FILES_DIR` sets this user's folder, so that it cannot be
-    /// changed.
-    pub fn root_locked(&self, stored: &StoredRoot) -> bool {
-        self.files_dir.is_some() && stored.owns_files_dir
-    }
-
-    /// The default files root, in the data dir.
+    /// The default files root, under `FILES_DIR`.
     pub fn default_root(&self, user_id: Uuid) -> PathBuf {
         self.user_dir(user_id).join("files")
     }
 
-    /// Organizer's own folder for a user, in the data dir: never inside the
-    /// user's tree.
+    /// Organizer's own folder for a user, under the local base: never inside
+    /// the user's tree.
     pub fn user_dir(&self, user_id: Uuid) -> PathBuf {
-        self.data_dir.join("users").join(user_id.to_string())
+        self.local_base().join("users").join(user_id.to_string())
     }
 
     /// Where a shared drive's tree is by default.
     pub fn shared_default_root(&self, drive_id: Uuid) -> PathBuf {
-        self.data_dir.join("drives").join(drive_id.to_string())
+        self.local_base().join("drives").join(drive_id.to_string())
     }
 
     /// At start: settle what the journal left, move the trash and the
@@ -730,13 +736,8 @@ impl Files {
         root: Option<&Path>,
     ) -> Result<(), FileError> {
         let drive_id = drives::my(user_id);
-        let stored = StoredRoot::of(self.db.reader(), user_id)
-            .await?
-            .ok_or(FileError::NotFound)?;
-        if self.root_locked(&stored) {
-            return Err(FileError::Invalid(
-                "The files folder is set by FILES_DIR".into(),
-            ));
+        if StoredRoot::of(self.db.reader(), user_id).await?.is_none() {
+            return Err(FileError::NotFound);
         }
         let root = match root {
             Some(root) => Some(self.check_root(root)?),
@@ -874,10 +875,8 @@ impl Files {
 /// What a user's row says of where their tree is.
 #[derive(Clone, Debug, Default, sqlx::FromRow)]
 pub struct StoredRoot {
-    /// The folder a superadmin chose; NULL: the default in the data dir.
+    /// The folder a superadmin chose; NULL: the default under `FILES_DIR`.
     pub files_root: Option<String>,
-    /// The first superadmin's: `FILES_DIR`, when it is set, is theirs.
-    pub owns_files_dir: bool,
 }
 
 impl StoredRoot {
@@ -886,7 +885,7 @@ impl StoredRoot {
         db: impl sqlx::SqliteExecutor<'e>,
         user_id: Uuid,
     ) -> sqlx::Result<Option<StoredRoot>> {
-        sqlx::query_as("SELECT files_root, owns_files_dir FROM users WHERE id = ?1")
+        sqlx::query_as("SELECT files_root FROM users WHERE id = ?1")
             .bind(user_id)
             .fetch_optional(db)
             .await

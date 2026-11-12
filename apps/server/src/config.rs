@@ -38,12 +38,59 @@ pub fn data_dir() -> PathBuf {
     var("DATA_DIR").unwrap_or_else(|| "data".into()).into()
 }
 
-/// `FILES_DIR`: the files root of the first superadmin (the one made at setup),
-/// which then cannot be changed in the settings; every other user has their
-/// own. Unset: the setup page and the superadmin settings decide, by default a
-/// folder in the data dir.
-pub fn files_dir() -> Option<PathBuf> {
-    var("FILES_DIR").map(PathBuf::from)
+/// `FILES_DIR`: where the file content is — a local path (by default a
+/// `files` folder in the data dir), or an `s3://bucket/prefix` URL, in which
+/// case the `FILES_S3_*` variables give the backend and every new drive is
+/// made in that bucket. The data dir itself always keeps the database, the
+/// embeddings, the key files and the scratch (uploads, the drop box, the
+/// backup work dir).
+pub enum FilesDir {
+    Local(PathBuf),
+    S3 { bucket: String, prefix: String },
+}
+
+pub fn files_dir(data_dir: &Path) -> Result<FilesDir, String> {
+    match var("FILES_DIR") {
+        None => Ok(FilesDir::Local(data_dir.join("files"))),
+        Some(url) if url.starts_with("s3://") => {
+            let rest = url.trim_start_matches("s3://");
+            let (bucket, prefix) = match rest.split_once('/') {
+                Some((bucket, prefix)) => (bucket.to_string(), prefix.trim_end_matches('/')),
+                None => (rest.to_string(), ""),
+            };
+            if bucket.is_empty() {
+                return Err("FILES_DIR's s3:// URL has no bucket".into());
+            }
+            Ok(FilesDir::S3 {
+                bucket,
+                prefix: prefix.to_string(),
+            })
+        }
+        Some(other) if other.contains("://") => Err(format!(
+            "FILES_DIR must be a folder path or s3://bucket/prefix, not `{other}`"
+        )),
+        Some(path) => Ok(FilesDir::Local(PathBuf::from(path))),
+    }
+}
+
+/// The `FILES_S3_*` variables: the backend of an `s3://` FILES_DIR.
+pub fn files_s3_endpoint() -> Result<String, String> {
+    var("FILES_S3_ENDPOINT")
+        .ok_or_else(|| "FILES_S3_ENDPOINT is needed with an s3:// FILES_DIR".into())
+}
+
+pub fn files_s3_region() -> String {
+    var("FILES_S3_REGION").unwrap_or_else(|| "us-east-1".into())
+}
+
+pub fn files_s3_access_key() -> Result<String, String> {
+    var("FILES_S3_ACCESS_KEY")
+        .ok_or_else(|| "FILES_S3_ACCESS_KEY is needed with an s3:// FILES_DIR".into())
+}
+
+pub fn files_s3_secret_key() -> Result<String, String> {
+    var("FILES_S3_SECRET_KEY")
+        .ok_or_else(|| "FILES_S3_SECRET_KEY is needed with an s3:// FILES_DIR".into())
 }
 
 /// The database's file, from `DATABASE_URL`, by default `organizer.db` in
