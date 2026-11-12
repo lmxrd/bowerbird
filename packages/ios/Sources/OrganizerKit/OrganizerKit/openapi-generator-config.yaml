@@ -1,7 +1,0 @@
-# swift-openapi-generator's build plugin reads this next to openapi.json
-# (copied from packages/backend/target/specs by scripts/spec.sh).
-generate:
-  - types
-  - client
-accessModifier: public
-namingStrategy: idiomatic

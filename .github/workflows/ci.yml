@@ -60,7 +60,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: openapi
-          path: packages/backend/target/specs/openapi.json
+          path: apps/server/dist/openapi.json
           if-no-files-found: error
           retention-days: 1
 
@@ -111,12 +111,12 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: openapi
-          path: packages/backend/target/specs
+          path: apps/server/dist
       - run: mise run install:frontend
       - run: mise run --skip-deps gen:sdk
       - run: mise run --skip-deps build:frontend
       # rust-embed reads the frontend from disk in a dev build, unless
-      # told to embed it: the image has no packages/frontend/dist.
+      # told to embed it: the image has no apps/frontend/dist.
       - run: mise run --skip-deps build:linux
         env:
           PROFILE: dev
@@ -147,11 +147,11 @@ jobs:
       - run: mise run audit:image
         env:
           IMAGE: organizer:ci
-      # The end-to-end smoke tests (packages/e2e): a real browser against this
+      # The end-to-end smoke tests (tooling/e2e): a real browser against this
       # image, on a fresh database. Only Chromium, cached by Playwright's
       # version (its system libraries are installed every time).
       - id: playwright
-        run: echo "version=$(jq -r '.devDependencies["@playwright/test"]' packages/e2e/package.json)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(jq -r '.devDependencies["@playwright/test"]' tooling/e2e/package.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
@@ -167,7 +167,7 @@ jobs:
         if: failure()
         with:
           name: e2e-results
-          path: packages/e2e/test-results
+          path: tooling/e2e/test-results
 
   # The desktop app (docs/M5_DESIGN.md) on macOS and Windows (on Linux it
   # is in the checks): its checks, the sync engine's tests, for the engine's
@@ -208,15 +208,15 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: openapi
-          path: packages/backend/target/specs
+          path: apps/server/dist
       # Xcode's build folder (the Swift packages, the OpenAPI generator's
       # plugin and their builds). Our own sources build again anyway (a
       # checkout's file times are new), so the key is what the packages
       # depend on, and a run saves only when it changes.
       - uses: actions/cache@v6
         with:
-          path: packages/desktop/macos/build/DerivedData
-          key: fileprovider-debug-${{ hashFiles('packages/ios/Sources/OrganizerKit/Package.swift', 'packages/desktop/macos/project.yml') }}
+          path: apps/desktop/macos/build/DerivedData
+          key: fileprovider-debug-${{ hashFiles('apps/ios/Sources/OrganizerKit/Package.swift', 'apps/desktop/macos/project.yml') }}
           restore-keys: fileprovider-debug-
       - run: mise run --skip-deps build:fileprovider
         env:
@@ -237,13 +237,13 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: openapi
-          path: packages/backend/target/specs
+          path: apps/server/dist
       # Xcode's build folder: the Swift packages, the OpenAPI generator's
       # plugin and their builds, which otherwise take most of the job.
       - uses: actions/cache@v6
         with:
           path: ~/Library/Developer/Xcode/DerivedData
-          key: ios-${{ hashFiles('packages/ios/Sources/OrganizerKit/Package.swift', 'packages/ios/project.yml') }}
+          key: ios-${{ hashFiles('apps/ios/Sources/OrganizerKit/Package.swift', 'apps/ios/project.yml') }}
           restore-keys: ios-
       - run: mise run check:ios
       - run: mise run --skip-deps gen:ios
@@ -262,7 +262,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: openapi
-          path: packages/backend/target/specs
+          path: apps/server/dist
       # Gradle's caches and wrapper, written from main only.
       - uses: gradle/actions/setup-gradle@v6
       - run: mise run --skip-deps check:android

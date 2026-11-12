@@ -4,7 +4,7 @@ data
 dist/*
 !dist/organizer-linux-*
 node_modules
-packages/*/node_modules
-packages/frontend/dist
-packages/backend/target
+**/node_modules
+apps/frontend/dist
+apps/server/target
 packages/sdk/src

@@ -8,7 +8,7 @@
       "extra-files": [
         {
           "type": "json",
-          "path": "packages/frontend/package.json",
+          "path": "apps/frontend/package.json",
           "jsonpath": "$.version"
         },
         {
@@ -18,7 +18,7 @@
         },
         {
           "type": "toml",
-          "path": "packages/backend/Cargo.toml",
+          "path": "apps/server/Cargo.toml",
           "jsonpath": "$.package.version"
         },
         {
@@ -28,7 +28,7 @@
         },
         {
           "type": "json",
-          "path": "packages/desktop/src-tauri/tauri.conf.json",
+          "path": "apps/desktop/src-tauri/tauri.conf.json",
           "jsonpath": "$.version"
         }
       ]

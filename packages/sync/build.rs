@@ -43,7 +43,7 @@ fn main() {
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
             PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
-                .join("../backend/target/specs/openapi.json")
+                .join("../../apps/server/dist/openapi.json")
         });
     println!("cargo:rerun-if-changed={}", spec.display());
     println!("cargo:rerun-if-env-changed=OPENAPI_SPEC");

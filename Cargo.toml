@@ -1,14 +1,15 @@
-# The Rust packages: the server (packages/backend), and from M5 the desktop
+# The Rust packages: the server (apps/server), and from M5 the desktop
 # app's sync engine and shell. One lockfile and one target directory; the
 # profiles live here (cargo reads them only from the workspace's root).
 [workspace]
 resolver = "3"
 members = [
-  "packages/backend",
+  "apps/server",
   "packages/e2e-crypto",
   "packages/sync",
   "packages/cloudfiles",
-  "packages/desktop/src-tauri",
+  "apps/desktop/src-tauri",
+  "tooling/decrypt",
 ]
 
 # Smaller, faster release binaries; the release workflow and the image

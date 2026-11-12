@@ -2,6 +2,8 @@
 
 Status: **M0 and M1 done**; M2 (the AI drop box) starts by asking how the use of AI is configured. This document records the decisions made so far and the open questions (§8). "Organizer" is a **working name** (see §10).
 
+The `M*` documents in this directory are per-milestone records: paths, task names and migration numbers in them are as of that milestone. The current layout is §3.2; the per-change migration files from before the squash are in git history.
+
 ## 1. What it is
 
 Organizer is a light, self-hosted, source-available (ethical source, Hippocratic License — see §2) file storage server in the spirit of Nextcloud and Seafile, with one differentiator: a **drop box**.
@@ -75,7 +77,7 @@ Nearly every behaviour below is a **user setting**; the value in bold is the def
 |---|---|---|
 | Async runtime | **tokio** | |
 | HTTP | **axum** + tower / tower-http | REST, SSE, uploads, WebDAV and the SPA in one router. |
-| Database | **sqlx** (SQLite) | WAL mode; a read pool plus **one dedicated writer** so writes queue instead of failing with `database is locked`. sqlx migrations. |
+| Database | **sqlx** (SQLite) | WAL mode; a read pool plus **one dedicated writer** so writes queue instead of failing with `database is locked`. sqlx migrations: one squashed base file (`apps/server/migrations/0001_base.sql`, applied in a single transaction) plus one numbered file per change (`0002` up). |
 | Full-text search | **SQLite FTS5** | Same DB file and transaction as the metadata: no index drift, trivial backup. |
 | Vector search | **sqlite-vec** | Loaded as an extension into the sqlx connections. Brute-force / quantised KNN; fine to ~1M vectors on a personal server. |
 | Content extraction | **xberg** (MIT; successor of kreuzberg) | Only the features we need: `pdf` (which is the native PDF extractor, `pdf-native`: that feature alone turns nothing on), `office`, `excel`, `html`; `chunking` when embeddings come. Only ever handed bytes (a URL it would fetch itself), with its cache off. Switch to `pdf-pdfium` only if the eval set shows native PDF extraction is too weak. `ocr` later. Requires Rust ≥ 1.92. |
@@ -87,7 +89,7 @@ Nearly every behaviour below is a **user setting**; the value in bold is the def
 | Hashing | **BLAKE3** | Fast; used for file identity and change detection. |
 | Backups *(M3)* | **rustic_core** | Filesystem and S3 targets. |
 | Page snapshots | **monolith** (or similar) | For the "bookmark + snapshot" link mode. |
-| API contract | **utoipa** + **utoipa-axum** | Code-first OpenAPI, as in Potoo and Woodmouse: every handler has a `#[utoipa::path]` and is registered with `routes!` on an `OpenApiRouter`, so the router is the one list of endpoints. A `specs` binary writes the spec to `target/specs/` (`mise run gen:spec`); it is **not committed**. The web client is **generated from it by hey-api** (fetch client, TanStack Query, zod validation; `mise run gen:client`) and not committed either. Mobile clients are generated from the same spec: swift-openapi-generator (iOS), openapi-generator (Kotlin); desktop uses `api-types` directly. The spec and Swagger UI are **served only when `SWAGGER_UI` is set**. |
+| API contract | **utoipa** + **utoipa-axum** | Code-first OpenAPI, as in Potoo and Woodmouse: every handler has a `#[utoipa::path]` and is registered with `routes!` on an `OpenApiRouter`, so the router is the one list of endpoints. The `openapi` binary (`--features spec`) writes the spec to `apps/server/dist/openapi.json` (`mise run gen:spec`); it is **not committed**. The web client is **generated from it by hey-api** (fetch client, TanStack Query, zod validation; `mise run gen:sdk`) and not committed either. Mobile clients are generated from the same spec: swift-openapi-generator (iOS), openapi-generator (Kotlin); the desktop window uses the same SDK through the app's `api` command. The spec and Swagger UI are **served only when `SWAGGER_UI` is set**. |
 | Single sign-on | **openidconnect** (without its default features) | Our own reqwest is handed to it, redirects off. Same design as Potoo and Woodmouse (§4.4). |
 | Sessions | **axum-login** on **tower-sessions**, our own SQLite store | Web UI cookie sessions (§4.4). |
 | Two-factor | **totp-rs** | TOTP + recovery codes (§4.4). |
@@ -99,9 +101,9 @@ Nearly every behaviour below is a **user setting**; the value in bold is the def
 | Observability | **tracing** | Structured logs; metrics later. |
 | Errors | **thiserror** in libraries, **anyhow** at the binary edge | |
 
-### 3.2 Repository layout — packages, few crates, split later
+### 3.2 Repository layout — apps, packages, tooling
 
-The same layout as Potoo and Woodmouse: one directory per package under `packages/`, one pnpm workspace and lockfile at the root. The backend starts as **one crate** (the `organizer` binary and its library, plus the `openapi` spec writer behind the `spec` feature), and becomes a Cargo workspace only when a part needs isolation (heavy dependencies such as xberg for compile times, or reuse by another crate).
+One directory per deployable under `apps/`, per shared library under `packages/`, per tool under `tooling/`; one pnpm workspace and lockfile and one Cargo workspace and lockfile at the root.
 
 ```
 organizer/
@@ -109,21 +111,27 @@ organizer/
 ├── pnpm-workspace.yaml        # the JavaScript packages, minimumReleaseAge
 ├── rust-toolchain.toml        # the Rust version, read by rustup and mise
 ├── mise.toml                  # the other tools + every task
-├── packages/
-│   ├── backend/               # the server crate: axum router, WebDAV, uploads, SSE, embedded web UI, and as modules
+├── apps/
+│   ├── server/                # the server crate: axum router, WebDAV, uploads, SSE, embedded web UI, and as modules
 │   │                          #   files, journal, reconciler, change log, inbox/pipeline,
 │   │                          #   ai, extract, search, jobs, auth, settings
-│   ├── frontend/              # React + TanStack Router/Query + Tailwind + Vite
+│   ├── frontend/              # React + TanStack Router/Query + Tailwind + Vite, embedded into the server
+│   ├── desktop/               # Tauri shell reusing the frontend's components; macos/ is the File Provider extension
+│   ├── ios/                   # Xcode project: app + share extension
+│   └── android/               # Gradle project: app + share target
+├── packages/
 │   ├── sdk/                   # TypeScript client generated from the spec (not committed)
+│   ├── sync/                  # the desktop sync engine (a library, no UI)
+│   ├── cloudfiles/            # Windows on-demand folders (the Cloud Files API)
+│   └── e2e-crypto/            # the E2E format's reference implementation and test vectors
+├── tooling/
 │   ├── e2e/                   # Playwright smoke tests against the built image
-│   ├── desktop/               # (M5) Tauri shell, reusing the frontend where sensible
-│   ├── ios/                   # (M4) Xcode project: app + share extension
-│   └── android/               # (M4) Gradle project: app + share target
+│   └── decrypt/               # the organizer-decrypt CLI
 ├── scripts/                   # the Linux build, the end-to-end run
 └── docs/
 ```
 
-Likely first splits of the backend into a workspace (`packages/backend/crates/*` or beside it): `api-types` (shared with the desktop client), `sync` (the desktop sync engine, M5), `extract` (xberg) and `backup` (rustic).
+The server is one crate (`organizer`: the binary, its library, and the `openapi` spec writer behind the `spec` feature); the sync engine and the Cloud Files API are their own crates in `packages/`, the decrypt CLI one in `tooling/decrypt`.
 
 ### 3.3 Configuration
 
@@ -166,7 +174,7 @@ As in Potoo and Woodmouse:
   - unit tests next to the code;
   - integration tests of the API on **axum-test**;
   - **Vitest** for the frontend's pure logic in `src/lib` (no component or visual tests);
-  - a few **Playwright** end-to-end smoke tests (`packages/e2e`, `scripts/e2e.sh`, `mise run test:e2e`) that drive a real browser against the built image.
+  - a few **Playwright** end-to-end smoke tests (`tooling/e2e`, `scripts/e2e.sh`, `mise run test:e2e`) that drive a real browser against the built image.
 - Unit and integration tests use a **scripted fake LLM provider**, so they're deterministic.
 - An **eval harness** runs separately (manually or nightly, not in PR CI): a fixture tree plus ~200 labelled sample files, run against real local models to report placement accuracy per model and catch prompt regressions.
 - WebDAV is checked with litmus plus real clients (macOS Finder, Windows Explorer, DAVx5, rclone).
@@ -211,7 +219,7 @@ As in Potoo and Woodmouse:
 
 - REST + JSON for everything the apps need; **SSE** stream for live events (new placement proposal, placement confirmed, sync changes).
 - **Change feed**: `GET /changes?since=<cursor>` returns an ordered list of creates, updates, moves and deletes, plus a new cursor. Desktop and mobile clients sync from this; content moves over plain REST (download) and resumable or plain uploads.
-- OpenAPI generated from `api-types` with utoipa.
+- The OpenAPI spec is generated from the handlers with utoipa (`mise run gen:spec`); the TypeScript SDK from the spec (`mise run gen:sdk`), and the mobile clients from the spec at their build time.
 
 ### 4.4 Auth
 
@@ -248,7 +256,7 @@ Sessions, two-factor, API keys, limits and cross-site protection work as in Poto
 
   The app redirects are a fixed allow-list. The web callback still goes only to `/` or `/login?error=<code>`.
 - **Single sign-on** (OpenID Connect), implemented as in Potoo and Woodmouse:
-  - Settings are an `oidc_settings` row. The `OIDC_*` environment variables override it field by field and lock the fields they set. An admin's save takes effect only after the provider answers.
+  - Settings are the `oidc` document of the `server_settings` key-value table (the shapes and validation are in code, `src/server_settings.rs`). The `OIDC_*` environment variables override it field by field and lock the fields they set. An admin's save takes effect only after the provider answers.
   - The login in progress (state, nonce, PKCE verifier, callback URL) is not stored on the server. It lives in a signed `__Host-` cookie, valid for ten minutes, signed with a key made at start.
   - The provider's metadata is cached per issuer. Its endpoints must be https, and its answers are size-limited.
   - Provider accounts are linked to users in `user_identities` (issuer + subject). An unlinked account is matched only by an email the provider says is verified.

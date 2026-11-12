@@ -146,7 +146,7 @@ the Share dialog's grants taking `user@host`, `Drive.remote` and
 
 Built 2026-11-10 against draft-ietf-ocm-open-cloud-mesh-07 (and RFC 9421,
 RFC 9530, RFC 6578, RFC 7033, RFC 6749 §4.1). The rules as built are in
-`packages/backend/AGENTS.md` (**Federation**); the choices made while
+`apps/server/AGENTS.md` (**Federation**); the choices made while
 building, then every place where the OCM text is not followed word for
 word.
 

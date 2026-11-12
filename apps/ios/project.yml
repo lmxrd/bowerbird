@@ -1,0 +1,138 @@
+# The Xcode project, made by XcodeGen (`mise run gen:ios`): Organizer.xcodeproj
+# is not committed, nor are the Info.plist and entitlements files it writes
+# from here. The Swift packages and their exact versions are in
+# Sources/OrganizerKit/Package.swift.
+name: Organizer
+options:
+  bundleIdPrefix: eu.vardalabs
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    # No team: simulator builds, signed to run locally. Signing for devices
+    # and the App Store is a step of its own (docs/M4_DESIGN.md §6).
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+
+packages:
+  OrganizerKit:
+    path: Sources/OrganizerKit
+
+targets:
+  Organizer:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/Organizer
+    dependencies:
+      - package: OrganizerKit
+      - target: ShareExtension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: eu.vardalabs.organizer
+        PRODUCT_NAME: Organizer
+    info:
+      path: Sources/Organizer/Info.plist
+      properties:
+        CFBundleDisplayName: Organizer
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        # A server on the local network may be plain http.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSPhotoLibraryUsageDescription: Organizer uploads the photos you pick.
+        # A push wakes the app to ask what is new (content-available).
+        UIBackgroundModes:
+          - remote-notification
+    entitlements:
+      path: Sources/Organizer/Organizer.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.eu.vardalabs.organizer
+        # APNs (docs/M6D_DESIGN.md). `development` until there is a team:
+        # the App Store's distribution signing makes it `production`.
+        # Unsigned builds (build:ios) leave entitlements out altogether, and
+        # iOS then shows such an app no notifications; the ad-hoc signed
+        # simulator build (as test:ios makes) gets them, and a token.
+        aps-environment: development
+
+  ShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Sources/ShareExtension
+    dependencies:
+      - package: OrganizerKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: eu.vardalabs.organizer.share
+        PRODUCT_NAME: OrganizerShare
+    info:
+      path: Sources/ShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Organizer
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsFileWithMaxCount: 50
+              NSExtensionActivationSupportsImageWithMaxCount: 50
+              NSExtensionActivationSupportsMovieWithMaxCount: 50
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    entitlements:
+      path: Sources/ShareExtension/ShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.eu.vardalabs.organizer
+
+  OrganizerTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/OrganizerTests
+      # The end-to-end encryption's test vectors (docs/E2E_SPEC.md §9),
+      # from the reference implementation, read by EncryptionTests.
+      - path: ../../packages/e2e-crypto/vectors.json
+        buildPhase: resources
+    dependencies:
+      - target: Organizer
+      - package: OrganizerKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: eu.vardalabs.organizer.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Organizer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Organizer
+        BUNDLE_LOADER: $(TEST_HOST)
+
+schemes:
+  Organizer:
+    build:
+      targets:
+        Organizer: all
+        ShareExtension: all
+    test:
+      gatherCoverageData: false
+      targets:
+        - OrganizerTests
+    run:
+      config: Debug

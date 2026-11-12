@@ -15,7 +15,7 @@ watchexec = "2.8.0"
 # The vulnerability scanners of `mise run audit` and `audit:image`.
 "aqua:google/osv-scanner" = "2.7.0"
 "aqua:aquasecurity/trivy" = "0.76.1"
-# The mobile apps (packages/ios, packages/android): XcodeGen makes the Xcode
+# The mobile apps (apps/ios, apps/android): XcodeGen makes the Xcode
 # project from project.yml; the JDK runs Gradle (its own version is the
 # committed wrapper's).
 # macOS only: it has no Linux or Windows build, and mise would fail
@@ -33,19 +33,29 @@ java = "temurin-25.0.5+8.0.LTS"
 description = "Run the backend on :8000 and the frontend dev server"
 depends = ["dev:backend", "dev:frontend"]
 
-# Restarted when its code changes. It needs packages/frontend/dist to exist
-# to compile, even in debug.
+# The debug binary, built once up front (cargo is incremental, so this is a
+# no-op when fresh): both dev tasks depend on it, so the compile output stays
+# above the two servers' logs instead of being interleaved with them.
+[tasks."build:backend"]
+description = "Build the backend in dev mode"
+depends = ["ensure:dist"]
+run = "cargo build"
+sources = ["src/**/*", "migrations/**/*", "Cargo.toml", "../../Cargo.lock", "build.rs"]
+outputs = ["target/debug/organizer"]
+dir = "{{ config_root }}/apps/server"
+
+# Restarted when its code changes.
 [tasks."dev:backend"]
 description = "Run the backend, restarted when its code changes"
-depends = ["build:frontend"]
+depends = ["build:backend"]
 run = "watchexec --restart --stop-signal SIGINT --watch src --watch migrations --watch Cargo.toml --watch ../../Cargo.lock --exts rs,toml,sql --ignore '**/target/**' -- cargo run"
-dir = "{{ config_root }}/packages/backend"
+dir = "{{ config_root }}/apps/server"
 
 [tasks."dev:frontend"]
 description = "Run the frontend dev server (/api goes to :8000)"
-depends = ["install:frontend", "gen:sdk"]
+depends = ["install:frontend", "gen:sdk", "build:backend"]
 run = "pnpm run dev"
-dir = "{{ config_root }}/packages/frontend"
+dir = "{{ config_root }}/apps/frontend"
 
 # Run the server against a built frontend. Depends on the build so a stale
 # binary can never serve yesterday's code.
@@ -53,7 +63,7 @@ dir = "{{ config_root }}/packages/frontend"
 description = "Build and run the release binary"
 depends = ["build"]
 run = "../../dist/organizer"
-dir = "{{ config_root }}/packages/backend"
+dir = "{{ config_root }}/apps/server"
 
 # Tasks with sources and outputs are skipped when the outputs are newer
 # than the sources.
@@ -75,11 +85,11 @@ dir = "{{ config_root }}"
 # The OpenAPI spec, written by the backend without the frontend embedded
 # (--features spec): the SDK is generated from it, so the spec comes first.
 [tasks."gen:spec"]
-description = "Write the OpenAPI spec to packages/backend/target/specs/openapi.json"
+description = "Write the OpenAPI spec to apps/server/dist/openapi.json"
 run = "cargo run --features spec --bin openapi"
 sources = ["src/**/*", "migrations/**/*", "Cargo.toml", "../../Cargo.lock", "build.rs"]
-outputs = ["target/specs/openapi.json"]
-dir = "{{ config_root }}/packages/backend"
+outputs = ["dist/openapi.json"]
+dir = "{{ config_root }}/apps/server"
 
 # The SDK the frontend calls the API with (packages/sdk/src), generated from
 # the spec, never committed. One task, so that tasks running side by side
@@ -88,7 +98,7 @@ dir = "{{ config_root }}/packages/backend"
 description = "Generate the TypeScript SDK (packages/sdk/src) from the spec"
 depends = ["install:frontend", "gen:spec"]
 run = "pnpm run openapi-ts"
-sources = ["../backend/target/specs/openapi.json", "openapi-ts.config.ts"]
+sources = ["../../apps/server/dist/openapi.json", "openapi-ts.config.ts"]
 outputs = ["src/index.ts"]
 dir = "{{ config_root }}/packages/sdk"
 
@@ -116,10 +126,10 @@ sources = [
   "../frontend/dist/**/*",
 ]
 outputs = ["../../dist/organizer"]
-dir = "{{ config_root }}/packages/backend"
+dir = "{{ config_root }}/apps/server"
 
 [tasks."build:frontend"]
-description = "Build the frontend into packages/frontend/dist"
+description = "Build the frontend into apps/frontend/dist"
 depends = ["install:frontend", "gen:sdk"]
 run = "pnpm run build"
 sources = [
@@ -129,10 +139,20 @@ sources = [
   "tsconfig.json",
   "components.json",
   "package.json",
-  "../sdk/src/**/*",
+  "../../packages/sdk/src/**/*",
   "../../pnpm-lock.yaml",
 ]
-dir = "{{ config_root }}/packages/frontend"
+dir = "{{ config_root }}/apps/frontend"
+
+# rust-embed fails to compile when apps/frontend/dist does not exist, but
+# dev, checks and tests never serve the bundle, so an empty directory is
+# enough: they need not wait for the frontend build. Release builds (build,
+# build:linux) still depend on the real build:frontend.
+[tasks."ensure:dist"]
+description = "Make sure apps/frontend/dist exists (rust-embed needs the folder to compile)"
+# node, not `mkdir -p`: the task also runs on Windows, where mise's shell is
+# pwsh and `mkdir -p` is not valid.
+run = '''node -e "require('fs').mkdirSync('apps/frontend/dist',{recursive:true})"'''
 
 # The static Linux binary (musl) the image copies, dist/organizer-linux-<arch>:
 # built outside the image, with this machine's cargo cache. ARCH=amd64 or
@@ -158,22 +178,23 @@ run = "podman build --format docker -t organizer ."
 description = "Run every check (format, lint, types)"
 depends = ["check:frontend", "check:backend", "check:sync", "check:crypto"]
 
-# rust-embed needs packages/frontend/dist to exist to compile, hence the build.
+# rust-embed needs apps/frontend/dist to exist to compile; the checks
+# never serve the bundle, so an empty folder is enough (ensure:dist).
 [tasks."check:backend"]
 description = "rustfmt and clippy (-D warnings), with and without the spec feature"
-depends = ["build:frontend"]
+depends = ["ensure:dist"]
 run = """
 cargo fmt --check \
   && cargo clippy --all-targets -- -D warnings \
   && cargo clippy --features spec --all-targets -- -D warnings
 """
-dir = "{{ config_root }}/packages/backend"
+dir = "{{ config_root }}/apps/server"
 
 [tasks."check:frontend"]
 description = "oxfmt, oxlint and tsc"
 depends = ["install:frontend", "gen:sdk"]
 run = "pnpm run check"
-dir = "{{ config_root }}/packages/frontend"
+dir = "{{ config_root }}/apps/frontend"
 
 [tasks.fix]
 description = "Apply the format and lint fixes"
@@ -182,13 +203,13 @@ depends = ["fix:backend", "fix:frontend"]
 [tasks."fix:backend"]
 description = "cargo fmt"
 run = "cargo fmt"
-dir = "{{ config_root }}/packages/backend"
+dir = "{{ config_root }}/apps/server"
 
 [tasks."fix:frontend"]
 description = "oxfmt and oxlint --fix"
 depends = ["install:frontend"]
 run = "pnpm run fix"
-dir = "{{ config_root }}/packages/frontend"
+dir = "{{ config_root }}/apps/frontend"
 
 # ---------------------------------------------------------------------------
 # The mobile apps (docs/M4_DESIGN.md). Not part of `check` and `test`: they
@@ -197,59 +218,59 @@ dir = "{{ config_root }}/packages/frontend"
 # ---------------------------------------------------------------------------
 
 [tasks."gen:ios"]
-description = "Make packages/ios/Organizer.xcodeproj from project.yml (XcodeGen)"
+description = "Make apps/ios/Organizer.xcodeproj from project.yml (XcodeGen)"
 depends = ["gen:spec"]
 run = "xcodegen generate --quiet"
 sources = ["project.yml"]
 outputs = ["Organizer.xcodeproj/project.pbxproj"]
-dir = "{{ config_root }}/packages/ios"
+dir = "{{ config_root }}/apps/ios"
 
 [tasks."build:ios"]
 description = "Build the iOS app and its share extension for the simulator"
 depends = ["gen:ios"]
 run = "scripts/build.sh"
-dir = "{{ config_root }}/packages/ios"
+dir = "{{ config_root }}/apps/ios"
 
 [tasks."test:ios"]
 description = "The iOS app's tests, on a simulator"
 depends = ["gen:ios"]
 run = "scripts/test.sh"
-dir = "{{ config_root }}/packages/ios"
+dir = "{{ config_root }}/apps/ios"
 
 # The desktop app's File Provider extension and its tool (Swift, on
 # OrganizerKit) are linted with the iOS app.
 [tasks."check:ios"]
 description = "swift format lint (strict), of the iOS app and the desktop app's File Provider extension"
 run = "swift format lint --strict --recursive Sources Tests ../desktop/macos/FileProvider ../desktop/macos/Helper"
-dir = "{{ config_root }}/packages/ios"
+dir = "{{ config_root }}/apps/ios"
 
 [tasks."fix:ios"]
 description = "swift format"
 run = "swift format --in-place --recursive Sources Tests ../desktop/macos/FileProvider ../desktop/macos/Helper"
-dir = "{{ config_root }}/packages/ios"
+dir = "{{ config_root }}/apps/ios"
 
 [tasks."build:android"]
 description = "Build the Android app (debug APK)"
 depends = ["gen:spec"]
 run = "./gradlew --quiet assembleDebug"
-dir = "{{ config_root }}/packages/android"
+dir = "{{ config_root }}/apps/android"
 
 [tasks."test:android"]
 description = "The Android app's unit tests"
 depends = ["gen:spec"]
 run = "./gradlew --quiet testDebugUnitTest"
-dir = "{{ config_root }}/packages/android"
+dir = "{{ config_root }}/apps/android"
 
 [tasks."check:android"]
 description = "ktlint and Android lint"
 depends = ["gen:spec"]
 run = "./gradlew --quiet ktlintCheck lintDebug"
-dir = "{{ config_root }}/packages/android"
+dir = "{{ config_root }}/apps/android"
 
 [tasks."fix:android"]
 description = "ktlint format"
 run = "./gradlew --quiet ktlintFormat"
-dir = "{{ config_root }}/packages/android"
+dir = "{{ config_root }}/apps/android"
 
 # Unit and integration tests: the backend's (cargo) and the frontend's
 # (Vitest). The end-to-end smoke tests are `test:e2e`.
@@ -257,24 +278,26 @@ dir = "{{ config_root }}/packages/android"
 description = "Run the backend, frontend and sync engine tests"
 depends = ["test:backend", "test:frontend", "test:sync", "test:crypto"]
 
+# The real frontend build, not just the folder (ensure:dist): the tests
+# serve the embedded bundle (other_paths_get_the_frontend).
 [tasks."test:backend"]
 description = "The backend's unit and integration tests"
 depends = ["build:frontend"]
 run = "cargo test"
 sources = ["src/**/*", "tests/**/*", "migrations/**/*", "Cargo.toml", "../../Cargo.lock"]
-dir = "{{ config_root }}/packages/backend"
+dir = "{{ config_root }}/apps/server"
 
 [tasks."test:frontend"]
 description = "The frontend's Vitest unit tests"
 depends = ["install:frontend", "gen:sdk"]
 run = "pnpm run test"
-dir = "{{ config_root }}/packages/frontend"
+dir = "{{ config_root }}/apps/frontend"
 
-# The end-to-end smoke tests (packages/e2e, Playwright): a real browser
+# The end-to-end smoke tests (tooling/e2e, Playwright): a real browser
 # against the image just built, on a fresh database (scripts/e2e.sh).
 [tasks.eval]
-description = "The drop box's eval set (packages/backend/tests/eval) against the model of the AI_* variables: manual, never in CI"
-dir = "{{ config_root }}/packages/backend"
+description = "The drop box's eval set (apps/server/tests/eval) against the model of the AI_* variables: manual, never in CI"
+dir = "{{ config_root }}/apps/server"
 run = "cargo run --release --example eval --"
 
 [tasks."test:e2e"]
@@ -290,18 +313,19 @@ run = [
 # podman and an Organizer server on this machine, and shares both ways.
 [tasks."interop:nextcloud"]
 description = "Share between a Nextcloud container and Organizer over OCM (manual: pulls an image)"
-depends = ["build:frontend"]
+depends = ["ensure:dist"]
 run = "scripts/interop-nextcloud.sh"
 
 # ---------------------------------------------------------------------------
 # End-to-end encryption (docs/E2E_SPEC.md): the format's reference
-# implementation, its test vectors and organizer-decrypt (packages/e2e-crypto).
+# implementation and its test vectors (packages/e2e-crypto); the
+# organizer-decrypt CLI is tooling/decrypt.
 # Its tests run organizer-decrypt against the backend, in-process.
 # ---------------------------------------------------------------------------
 
 [tasks."check:crypto"]
 description = "rustfmt and clippy (-D warnings) of the encryption crate"
-depends = ["build:frontend"]
+depends = ["ensure:dist"]
 run = [
   "cargo fmt -p organizer-e2e-crypto --check",
   "cargo clippy -p organizer-e2e-crypto --all-targets -- -D warnings",
@@ -309,7 +333,7 @@ run = [
 
 [tasks."test:crypto"]
 description = "The encryption crate's tests: the format, the vectors, organizer-decrypt"
-depends = ["build:frontend"]
+depends = ["ensure:dist"]
 run = "cargo test -p organizer-e2e-crypto"
 
 # The vectors every client checks (packages/e2e-crypto/vectors.json), written
@@ -322,14 +346,14 @@ run = "cargo run -p organizer-e2e-crypto --example vectors"
 [tasks."build:decrypt"]
 description = "Build organizer-decrypt for this machine into dist/organizer-decrypt"
 run = """
-cargo build --release -p organizer-e2e-crypto --bin organizer-decrypt
+cargo build --release -p organizer-decrypt
 mkdir -p dist
 cp "$(cargo metadata --format-version 1 --no-deps | jq -r .target_directory)/release/organizer-decrypt" dist/organizer-decrypt
 """
 
 # ---------------------------------------------------------------------------
 # The desktop app (docs/M5_DESIGN.md): the sync engine (packages/sync, a
-# library with no UI) and the Tauri app (packages/desktop: src-tauri and
+# library with no UI) and the Tauri app (apps/desktop: src-tauri and
 # its window, a Vite app built from the frontend's components). The engine
 # joins `check` and `test` (its tests need no display); the app has tasks
 # of its own, as it needs Tauri's system libraries on Linux. Each step is a
@@ -344,7 +368,7 @@ cp "$(cargo metadata --format-version 1 --no-deps | jq -r .target_directory)/rel
 # checked here and not only on the Windows runner.
 [tasks."check:sync"]
 description = "rustfmt and clippy (-D warnings) of the sync engine and its Cloud Files crate (for Windows too)"
-depends = ["gen:spec", "build:frontend"]
+depends = ["gen:spec", "ensure:dist"]
 run = [
   "cargo fmt -p organizer-sync -p organizer-cloudfiles --check",
   "cargo clippy -p organizer-sync -p organizer-cloudfiles --all-targets -- -D warnings",
@@ -353,13 +377,13 @@ run = [
 
 [tasks."test:sync"]
 description = "The sync engine's tests, against the backend in-process, and its Cloud Files crate's"
-depends = ["gen:spec", "build:frontend"]
+depends = ["gen:spec", "ensure:dist"]
 run = "cargo test -p organizer-sync -p organizer-cloudfiles"
 
-# The window's build (packages/desktop/dist), which the app embeds: the
+# The window's build (apps/desktop/dist), which the app embeds: the
 # Rust side does not compile without it.
 [tasks."build:desktop-ui"]
-description = "Build the desktop app's window into packages/desktop/dist"
+description = "Build the desktop app's window into apps/desktop/dist"
 depends = ["install:frontend", "gen:sdk"]
 run = "pnpm run build"
 sources = [
@@ -369,11 +393,11 @@ sources = [
   "tsconfig.json",
   "package.json",
   "../frontend/src/**/*",
-  "../sdk/src/**/*",
+  "../../packages/sdk/src/**/*",
   "../../pnpm-lock.yaml",
 ]
 outputs = ["dist/index.html"]
-dir = "{{ config_root }}/packages/desktop"
+dir = "{{ config_root }}/apps/desktop"
 
 # The engine's library only: its tests (which build the backend) are
 # linted by check:sync.
@@ -384,7 +408,7 @@ run = [
   "cargo fmt -p organizer-sync -p organizer-cloudfiles -p organizer-desktop --check",
   "cargo clippy -p organizer-sync --lib -- -D warnings",
   "cargo clippy -p organizer-desktop --all-targets -- -D warnings",
-  "pnpm --dir packages/desktop run check",
+  "pnpm --dir apps/desktop run check",
 ]
 
 [tasks."fix:desktop"]
@@ -392,7 +416,7 @@ description = "cargo fmt of the engine and the app; oxfmt and oxlint --fix of it
 depends = ["install:frontend"]
 run = [
   "cargo fmt -p organizer-sync -p organizer-cloudfiles -p organizer-desktop",
-  "pnpm --dir packages/desktop run fix",
+  "pnpm --dir apps/desktop run fix",
 ]
 
 [tasks."test:desktop"]
@@ -400,7 +424,7 @@ description = "The desktop app's tests: its Rust side and its window's logic (Vi
 depends = ["gen:spec", "build:desktop-ui"]
 run = [
   "cargo test -p organizer-desktop",
-  "pnpm --dir packages/desktop run test",
+  "pnpm --dir apps/desktop run test",
 ]
 
 # The File Provider extension and its tool on their own (build:desktop
@@ -410,14 +434,14 @@ run = [
 description = "Build the macOS File Provider extension and its tool (CONFIGURATION=Debug: this Mac only)"
 depends = ["gen:spec"]
 run = "bash macos/scripts/build.sh"
-dir = "{{ config_root }}/packages/desktop"
+dir = "{{ config_root }}/apps/desktop"
 
 # `tauri dev` starts the window's dev server (:5174) itself.
 [tasks."dev:desktop"]
 description = "Run the desktop app, restarted when its code changes"
 depends = ["gen:spec", "install:frontend", "gen:sdk"]
 run = "pnpm tauri dev"
-dir = "{{ config_root }}/packages/desktop"
+dir = "{{ config_root }}/apps/desktop"
 
 # This system's bundles (.app and .dmg on macOS, .msi and .exe on Windows,
 # .deb, .rpm and .AppImage on Linux), unsigned, copied to dist/desktop/ out
@@ -426,7 +450,7 @@ dir = "{{ config_root }}/packages/desktop"
 description = "Build the desktop app's bundles for this system into dist/desktop"
 depends = ["gen:spec", "install:frontend", "gen:sdk"]
 run = [
-  "pnpm --dir packages/desktop tauri build",
+  "pnpm --dir apps/desktop tauri build",
   "node scripts/desktop-bundles.mjs",
 ]
 
@@ -462,7 +486,7 @@ run = 'trivy image --skip-version-check --exit-code 1 --severity HIGH,CRITICAL -
 description = "Remove builds, node_modules, the generated SDK and the local data"
 dir = "{{ config_root }}"
 run = """
-rm -rf packages/backend/target packages/backend/data data dist
-rm -rf node_modules packages/*/node_modules packages/frontend/dist packages/sdk/src
+rm -rf apps/server/target apps/server/data data dist
+rm -rf node_modules apps/*/node_modules packages/*/node_modules tooling/*/node_modules apps/frontend/dist packages/sdk/src
 rm -f packages/sdk/openapi-ts-error-*.log
 """

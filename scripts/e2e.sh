@@ -1,5 +1,5 @@
 #!/bin/sh
-# The end-to-end smoke tests (packages/e2e) against the built image: a fresh
+# The end-to-end smoke tests (tooling/e2e) against the built image: a fresh
 # container with an empty data volume, on 127.0.0.1:$E2E_PORT (default
 # 8090), removed afterwards. `mise run test:e2e` builds the image first.
 # CONTAINER picks the engine (podman locally, docker in CI); IMAGE the image.

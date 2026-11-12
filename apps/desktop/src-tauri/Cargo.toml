@@ -1,0 +1,33 @@
+[package]
+name = "organizer-desktop"
+version = "0.0.0"
+description = "Organizer's desktop app: two-way sync, the tray and the drop box"
+edition = "2024"
+# `cargo run` without --bin: the app.
+default-run = "organizer-desktop"
+
+[lib]
+name = "organizer_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[dependencies]
+keyring = "4.2.0"
+organizer-sync = { version = "0.0.0", path = "../../../packages/sync" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+tauri = { version = "2.12.5", features = ["tray-icon"] }
+tauri-plugin-autostart = "2.7.0"
+tauri-plugin-notification = "2.8.0"
+tauri-plugin-opener = "2.7.2"
+tauri-plugin-single-instance = "2.5.5"
+tokio = { version = "1.53.2", features = ["full"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+uuid = { version = "1.29.0", features = ["serde"] }
+
+# No unsafe code in our own: Tauri's macros expand to none.
+[lints.rust]
+unsafe_code = "forbid"

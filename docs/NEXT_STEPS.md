@@ -30,7 +30,7 @@ Tick an item off by removing it; add new ones under the right heading.
         member opens and writes);
   - [ ] a whole remote drive's error banner (`RemoteDriveBanner`).
 - [ ] **Flaky test:** `link_passwords_are_limited_as_sign_ins`
-      (`packages/backend/tests/api.rs`) sometimes gets 204 instead of 429
+      (`apps/server/tests/api.rs`) sometimes gets 204 instead of 429
       under load. It is time-based; make it deterministic.
 
 ## From earlier milestones
@@ -42,7 +42,7 @@ Tick an item off by removing it; add new ones under the right heading.
       simulators.
 - [ ] **CI.** Nothing is pushed yet, so no workflow has run on this work.
 - [ ] **Load test.** Worth a run after M7c's storage layer and M7e's
-      change log (`mise run loadtest`, manual).
+      change log (no load-test task in this repo's mise yet).
 - [ ] **Approve the drive settings page.** `/settings/drives/<id>` was
       built without an approved mockup.
 - [ ] **Trash's "Goes in N days"** uses the user's trash days, not the
