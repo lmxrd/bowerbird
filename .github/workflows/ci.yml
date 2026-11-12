@@ -111,7 +111,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: openapi
-          path: apps/server/target/dist
+          path: apps/server/dist
       - run: mise run install:frontend
       - run: mise run --skip-deps gen:sdk
       - run: mise run --skip-deps build:frontend
@@ -208,7 +208,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: openapi
-          path: apps/server/target/dist
+          path: apps/server/dist
       # Xcode's build folder (the Swift packages, the OpenAPI generator's
       # plugin and their builds). Our own sources build again anyway (a
       # checkout's file times are new), so the key is what the packages
@@ -237,7 +237,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: openapi
-          path: apps/server/target/dist
+          path: apps/server/dist
       # Xcode's build folder: the Swift packages, the OpenAPI generator's
       # plugin and their builds, which otherwise take most of the job.
       - uses: actions/cache@v6
@@ -262,7 +262,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: openapi
-          path: apps/server/target/dist
+          path: apps/server/dist
       # Gradle's caches and wrapper, written from main only.
       - uses: gradle/actions/setup-gradle@v6
       - run: mise run --skip-deps check:android

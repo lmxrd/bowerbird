@@ -8,7 +8,7 @@ plugins {
 }
 
 // Written by `mise run gen:spec`; never committed, as the web's SDK.
-val spec = rootProject.file("../backend/dist/openapi.json")
+val spec = rootProject.file("../server/dist/openapi.json")
 val generated = layout.buildDirectory.dir("generated/openapi")
 
 openApiGenerate {
@@ -58,7 +58,7 @@ android {
         unitTests.isReturnDefaultValues = true
         unitTests.all {
             // The encryption format's test vectors, read where the reference writes them.
-            val vectors = rootProject.file("../e2e-crypto/vectors.json")
+            val vectors = rootProject.file("../../packages/e2e-crypto/vectors.json")
             it.systemProperty("e2e.vectors", vectors.absolutePath)
             it.inputs.file(vectors)
         }

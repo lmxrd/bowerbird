@@ -11,7 +11,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-spec=../backend/dist/openapi.json
+spec=../server/dist/openapi.json
 target=Sources/OrganizerKit/OrganizerKit/openapi.json
 if [[ ! -f $spec ]]; then
   echo "No $spec: run \`mise run gen:spec\` first" >&2

@@ -150,7 +150,9 @@ dir = "{{ config_root }}/apps/frontend"
 # build:linux) still depend on the real build:frontend.
 [tasks."ensure:dist"]
 description = "Make sure apps/frontend/dist exists (rust-embed needs the folder to compile)"
-run = "mkdir -p apps/frontend/dist"
+# node, not `mkdir -p`: the task also runs on Windows, where mise's shell is
+# pwsh and `mkdir -p` is not valid.
+run = '''node -e "require('fs').mkdirSync('apps/frontend/dist',{recursive:true})"'''
 
 # The static Linux binary (musl) the image copies, dist/organizer-linux-<arch>:
 # built outside the image, with this machine's cargo cache. ARCH=amd64 or

@@ -93,7 +93,7 @@ type Vectors = {
 };
 
 const vectors = Object.values(
-  import.meta.glob<Vectors>("../../../e2e-crypto/vectors.json", {
+  import.meta.glob<Vectors>("../../../../packages/e2e-crypto/vectors.json", {
     eager: true,
     import: "default",
   }),

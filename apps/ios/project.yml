@@ -112,7 +112,7 @@ targets:
       - path: Tests/OrganizerTests
       # The end-to-end encryption's test vectors (docs/E2E_SPEC.md §9),
       # from the reference implementation, read by EncryptionTests.
-      - path: ../e2e-crypto/vectors.json
+      - path: ../../packages/e2e-crypto/vectors.json
         buildPhase: resources
     dependencies:
       - target: Organizer
