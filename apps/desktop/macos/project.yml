@@ -1,6 +1,6 @@
 # The desktop app's File Provider extension for macOS (docs/M5B_DESIGN.md
 # §2), and the small tool the app runs to add, remove and signal its
-# domains (`organizer-fileprovider`), both on OrganizerKit (packages/ios,
+# domains (`organizer-fileprovider`), both on OrganizerKit (apps/ios,
 # the iOS app's Swift package: one Swift client for both). Here, beside the
 # Tauri app whose bundle they go in, rather than beside the iOS project:
 # they ship with the desktop app, are built by its `build:desktop`

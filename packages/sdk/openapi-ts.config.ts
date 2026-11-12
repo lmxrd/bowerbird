@@ -4,7 +4,7 @@ import { defineConfig } from "@hey-api/openapi-ts";
 // gen:spec` writes it); it is not committed. OPENAPI_SPEC points elsewhere,
 // e.g. in the Docker build.
 export default defineConfig({
-  input: process.env.OPENAPI_SPEC ?? "../backend/dist/openapi.json",
+  input: process.env.OPENAPI_SPEC ?? "../../apps/server/dist/openapi.json",
   output: "src",
   plugins: [
     "@hey-api/typescript",

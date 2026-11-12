@@ -123,7 +123,7 @@ organizer/
 └── docs/
 ```
 
-Likely first splits of the backend into a workspace (`packages/backend/crates/*` or beside it): `api-types` (shared with the desktop client), `sync` (the desktop sync engine, M5), `extract` (xberg) and `backup` (rustic).
+Likely first splits of the backend into a workspace (`apps/server/crates/*` or beside it): `api-types` (shared with the desktop client), `sync` (the desktop sync engine, M5), `extract` (xberg) and `backup` (rustic).
 
 ### 3.3 Configuration
 
@@ -166,7 +166,7 @@ As in Potoo and Woodmouse:
   - unit tests next to the code;
   - integration tests of the API on **axum-test**;
   - **Vitest** for the frontend's pure logic in `src/lib` (no component or visual tests);
-  - a few **Playwright** end-to-end smoke tests (`packages/e2e`, `scripts/e2e.sh`, `mise run test:e2e`) that drive a real browser against the built image.
+  - a few **Playwright** end-to-end smoke tests (`tooling/e2e`, `scripts/e2e.sh`, `mise run test:e2e`) that drive a real browser against the built image.
 - Unit and integration tests use a **scripted fake LLM provider**, so they're deterministic.
 - An **eval harness** runs separately (manually or nightly, not in PR CI): a fixture tree plus ~200 labelled sample files, run against real local models to report placement accuracy per model and catch prompt regressions.
 - WebDAV is checked with litmus plus real clients (macOS Finder, Windows Explorer, DAVx5, rclone).

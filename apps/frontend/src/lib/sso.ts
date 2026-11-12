@@ -1,6 +1,6 @@
 /**
  * What the login page says for each single sign-on error code. The codes
- * are the backend's `Failure` (packages/backend/src/oidc.rs): change both.
+ * are the backend's `Failure` (apps/server/src/oidc.rs): change both.
  */
 export const SSO_ERRORS: Record<string, string> = {
   unavailable:

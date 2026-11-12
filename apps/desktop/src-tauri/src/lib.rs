@@ -2,7 +2,7 @@
 //! (`organizer-sync`) in the background, a tray (menu bar) menu, and a
 //! window with the sync status, the drop box's review and the settings.
 //!
-//! The window is a small React app (`packages/desktop/src`) built from the
+//! The window is a small React app (`apps/desktop/src`) built from the
 //! web app's components. It talks to the server through the `api` command,
 //! which sends its requests with the device's token: the token stays in
 //! Rust and in the system's credential store, never in the web view, and

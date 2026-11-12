@@ -45,7 +45,7 @@ they can always be placed by hand.
 
 > **Since M6c** the one connection is a registry of models with a default and
 > a model per kind of work, and the `AI_*` variables are one locked model:
-> see [M6C_DESIGN.md](M6C_DESIGN.md) §1 and `packages/backend/AGENTS.md`.
+> see [M6C_DESIGN.md](M6C_DESIGN.md) §1 and `apps/server/AGENTS.md`.
 > What follows is the connection as M2 built it.
 
 ### 2.1 Settings

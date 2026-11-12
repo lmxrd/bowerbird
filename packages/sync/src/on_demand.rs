@@ -8,7 +8,7 @@
 //! download, a placeholder is never hashed (that would download it), and
 //! what was downloaded or sent becomes a placeholder in sync. The system
 //! asks for a placeholder's bytes through [`Fetcher`]. On macOS the File
-//! Provider extension keeps them (`packages/desktop/macos`), and the engine
+//! Provider extension keeps them (`apps/desktop/macos`), and the engine
 //! leaves such a folder alone.
 
 use crate::remote::Remote;

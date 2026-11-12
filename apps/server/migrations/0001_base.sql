@@ -3,7 +3,7 @@
 -- with their comments and the docs' "migration NNNN" references, are in git
 -- history. New schema changes are new numbered files, 0002_*.sql and up;
 -- never edit this one once it has shipped (its checksum is recorded in
--- _sqlx_migrations — see packages/backend/AGENTS.md).
+-- _sqlx_migrations — see apps/server/AGENTS.md).
 --
 -- Produced by applying 0001-0035 to a fresh database and dumping the final
 -- schema (sqlite3 .schema), then normalized: columns that later migrations

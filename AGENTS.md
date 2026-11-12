@@ -17,12 +17,12 @@ it provides Rust, Node, pnpm and the other tools at the pinned versions).
 | --- | --- |
 | `mise run check` | rustfmt, clippy (`-D warnings`), oxfmt, oxlint, tsc. **Must pass.** |
 | `mise run test` | The unit and integration tests: backend (cargo, axum-test) and frontend (Vitest). **Must pass.** |
-| `mise run test:e2e` | The end-to-end smoke tests: builds the image, then Playwright drives a browser through it (`packages/e2e`, `scripts/e2e.sh`) |
+| `mise run test:e2e` | The end-to-end smoke tests: builds the image, then Playwright drives a browser through it (`tooling/e2e`, `scripts/e2e.sh`) |
 | `mise run fix` | Applies the format and lint fixes |
 | `mise run dev` | Backend on :8000 plus the Vite dev server |
-| `mise run eval` | The drop box's eval set (`packages/backend/tests/eval`, synthetic) against the model of the `AI_*` variables: manual, never in CI |
+| `mise run eval` | The drop box's eval set (`apps/server/tests/eval`, synthetic) against the model of the `AI_*` variables: manual, never in CI |
 | `mise run interop:nextcloud` | Federation with a Nextcloud container (podman, `scripts/interop-nextcloud.sh`): shares both ways over OCM. Manual, never in CI: it pulls an image; run it only when asked |
-| `mise run gen:spec` | Writes the OpenAPI spec to `packages/backend/dist/openapi.json` |
+| `mise run gen:spec` | Writes the OpenAPI spec to `apps/server/dist/openapi.json` |
 | `mise run gen:sdk` | Generates the TypeScript SDK (`packages/sdk/src`) from the spec |
 | `mise run build` / `build:linux` / `build:docker` | Release binary (`dist/organizer`) / static Linux binary (`dist/organizer-linux-<arch>`, zig cross-compiles) / image (podman) that copies it |
 | `mise run audit` / `audit:image` | Known vulnerabilities in the lockfiles (osv-scanner) / in an image's Alpine packages (Trivy; `IMAGE=`, by default the published one) |
@@ -34,29 +34,29 @@ not touch `data/`.
 
 ## Structure
 
-- `packages/backend`: the Rust server (its rules: `packages/backend/AGENTS.md`).
-- `packages/frontend`: the React app embedded in it (`packages/frontend/AGENTS.md`).
+- `apps/server`: the Rust server (its rules: `apps/server/AGENTS.md`).
+- `apps/frontend`: the React app embedded in it (`apps/frontend/AGENTS.md`).
 - `packages/sdk`: the API client, generated from the backend's OpenAPI spec
   (`mise run gen:sdk`), never committed.
-- `packages/e2e`: the end-to-end smoke tests (Playwright).
-- `packages/ios`: the iOS app (below).
-- `packages/android`: the Android app (below).
+- `tooling/e2e`: the end-to-end smoke tests (Playwright).
+- `apps/ios`: the iOS app (below).
+- `apps/android`: the Android app (below).
 - `packages/e2e-crypto`: end-to-end-encrypted folders' reference
-  implementation (docs/E2E_SPEC.md), the test vectors every client checks
-  (`vectors.json`, `mise run gen:vectors`) and `organizer-decrypt`
-  (`mise run build:decrypt`); `check:crypto` and `test:crypto` are part of
-  `check` and `test`.
-- `packages/sync`, `packages/cloudfiles` and `packages/desktop`: the
+  implementation (docs/E2E_SPEC.md) and the test vectors every client checks
+  (`vectors.json`, `mise run gen:vectors`); `check:crypto` and `test:crypto`
+  are part of `check` and `test`.
+- `tooling/decrypt`: the `organizer-decrypt` CLI (`mise run build:decrypt`).
+- `packages/sync`, `packages/cloudfiles` and `apps/desktop`: the
   desktop app's sync engine, its Windows Cloud Files crate, and the app
   itself with its macOS File Provider extension (below).
 - One pnpm workspace and lockfile at the root, and one Cargo workspace and
-  lockfile at the root (`packages/backend`, `packages/e2e-crypto`, `packages/sync`,
-  `packages/cloudfiles`, `packages/desktop/src-tauri`, one target
+  lockfile at the root (`apps/server`, `packages/e2e-crypto`, `packages/sync`,
+  `packages/cloudfiles`, `apps/desktop/src-tauri`, one target
   directory); `scripts/` for the
   Linux build, the end-to-end run and the desktop bundles; `.github/` for CI, releases, Dependabot and
   the daily security scans.
 
-## iOS app (`packages/ios`)
+## iOS app (`apps/ios`)
 
 SwiftUI, iOS 18 or later (docs/M4_DESIGN.md). Xcode on a Mac; not part of
 `check` and `test`.
@@ -82,7 +82,7 @@ SwiftUI, iOS 18 or later (docs/M4_DESIGN.md). Xcode on a Mac; not part of
   URLProtocol, the device login, the Keychain, the view models against a
   stub transport, the File Provider logic against a stub tree).
 - **OrganizerKit on macOS too** (`.macOS(.v14)`): the desktop app's File
-  Provider extension (`packages/desktop/macos`) links it statically (the
+  Provider extension (`apps/desktop/macos`) links it statically (the
   `OrganizerKitStatic` product; the iOS targets link the dynamic one).
   Its views are iOS only (`#if os(iOS)`). `OrganizerKit/FileProvider` is
   the extension's logic, kept here so that it is tested here (and can give
@@ -234,7 +234,7 @@ SwiftUI, iOS 18 or later (docs/M4_DESIGN.md). Xcode on a Mac; not part of
 - **Signing:** simulator builds have no team. Device builds and the App
   Store are a step of their own.
 
-## Android app (`packages/android`)
+## Android app (`apps/android`)
 
 Kotlin, Jetpack Compose (Material 3), Gradle with the committed wrapper
 and a version catalog (`gradle/libs.versions.toml`, every version exact;
@@ -250,7 +250,7 @@ gitignored) for the Android SDK.
 
 All but `fix:android` run `gen:spec` first: the API client is generated by
 the openapi-generator Gradle plugin from
-`packages/backend/dist/openapi.json` into `core/build/` (never
+`apps/server/dist/openapi.json` into `core/build/` (never
 committed).
 
 - **Encrypted folders** (docs/E2E_SPEC.md, `:core` `e2e/`): the format
@@ -371,14 +371,14 @@ committed).
 - View models take interfaces or functions, not Android types, so that
   JVM tests stand in for the server; `MainDispatcherRule` replaces Main.
 
-## Desktop app (`packages/sync`, `packages/desktop`)
+## Desktop app (`packages/sync`, `apps/desktop`)
 
 Full two-way sync for macOS, Windows and Linux (docs/M5_DESIGN.md, M5a),
 and on-demand folders on macOS and Windows (docs/M5B_DESIGN.md, M5b).
 `packages/sync` is the engine, a library with no UI; `packages/cloudfiles`
-its on-demand folders on Windows (the Cloud Files API); `packages/desktop`
+its on-demand folders on Windows (the Cloud Files API); `apps/desktop`
 is the Tauri 2 app (`src-tauri`, a workspace member) and its window, a
-small Vite/React app in the pnpm workspace, and `packages/desktop/macos`
+small Vite/React app in the pnpm workspace, and `apps/desktop/macos`
 the macOS File Provider extension and its tool (Swift, XcodeGen).
 
 | Command | Use |
@@ -389,7 +389,7 @@ the macOS File Provider extension and its tool (Swift, XcodeGen).
 | `mise run test:desktop` | The app's Rust tests and the window's Vitest tests |
 | `mise run fix:desktop` | cargo fmt, oxfmt and oxlint --fix |
 | `mise run dev:desktop` | The app, rebuilt as its code changes (`tauri dev`; the window's dev server on :5174) |
-| `mise run build:desktop` | This system's bundles, unsigned, into `dist/desktop` (`scripts/desktop-bundles.mjs` copies them out of the target directory). On a Mac it first builds the File Provider extension and its tool (`packages/desktop/macos/scripts/build.sh`, XcodeGen and xcodebuild, from Tauri's `beforeBundleCommand` in `src-tauri/tauri.macos.conf.json`, which copies them into the bundle). On a Mac the `.dmg`'s layout is set through Finder (AppleScript); where that is not allowed (a sandbox, a session without Finder automation), `CI=true` skips it |
+| `mise run build:desktop` | This system's bundles, unsigned, into `dist/desktop` (`scripts/desktop-bundles.mjs` copies them out of the target directory). On a Mac it first builds the File Provider extension and its tool (`apps/desktop/macos/scripts/build.sh`, XcodeGen and xcodebuild, from Tauri's `beforeBundleCommand` in `src-tauri/tauri.macos.conf.json`, which copies them into the bundle). On a Mac the `.dmg`'s layout is set through Finder (AppleScript); where that is not allowed (a sandbox, a session without Finder automation), `CI=true` skips it |
 | `mise run build:fileprovider` | The File Provider extension and its tool on their own (macOS); `CONFIGURATION=Debug` builds this Mac's architecture only, as CI does |
 
 The app's tasks are not in `check` and `test`: on Linux they need Tauri's
@@ -398,7 +398,7 @@ app against a local backend: `DATA_DIR=$(mktemp -d) PORT=8123
 cargo run -p organizer`, then sign in with `http://127.0.0.1:8123`.
 
 - **The API client** is generated by progenitor at build time
-  (`packages/sync/build.rs`) from `packages/backend/dist/openapi.json`
+  (`packages/sync/build.rs`) from `apps/server/dist/openapi.json`
   (`gen:spec` first): it brings the 3.1 spec down to the 3.0 progenitor
   reads and keeps only the operations the engine calls (add one there when
   the engine needs it). Never committed. The multipart and resumable
@@ -563,7 +563,7 @@ cargo run -p organizer`, then sign in with `http://127.0.0.1:8123`.
   as a `cfg(windows)` dependency. `check:sync` lints it for Windows from a
   Mac or Linux (the target's std is in `rust-toolchain.toml`); the Windows
   CI job runs it.
-- **The macOS File Provider extension** (`packages/desktop/macos`,
+- **The macOS File Provider extension** (`apps/desktop/macos`,
   `project.yml`; generated project, plists and entitlements not
   committed): `FileProvider/` (an `NSFileProviderReplicatedExtension`, a
   domain per on-demand folder whose identifier is the folder's id (a
@@ -590,8 +590,8 @@ cargo run -p organizer`, then sign in with `http://127.0.0.1:8123`.
   store through `keyring`, never in a file or the web view; the
   computer's name). Plugins: single-instance, autostart, notification,
   opener. `unsafe_code` is forbidden here too.
-- **The window** (`packages/desktop/src`) imports the web app's components
-  (`@/` is `packages/frontend/src`): never copy one; a component both need
+- **The window** (`apps/desktop/src`) imports the web app's components
+  (`@/` is `apps/frontend/src`): never copy one; a component both need
   goes in the frontend. Its SDK calls go through the app's `api` command
   (`src/lib/transport.ts`), which adds the token. Its own code: the
   pages, `lib/desktop.ts` (the app's state and commands, typed as in
@@ -600,7 +600,7 @@ cargo run -p organizer`, then sign in with `http://127.0.0.1:8123`.
 - **Signing:** none yet: the bundles are unsigned. The File Provider
   extension does not load until the app, the extension and its tool are
   signed with an Apple team: set `DEVELOPMENT_TEAM` (and the signing style
-  and identity) in `packages/desktop/macos/project.yml`, where the
+  and identity) in `apps/desktop/macos/project.yml`, where the
   entitlements are (app sandbox, network client, the app group and the
   Keychain access group of the team), and sign the Tauri app with the same
   team. `scripts/build.sh` builds unsigned while the team is empty.
@@ -615,7 +615,7 @@ cargo run -p organizer`, then sign in with `http://127.0.0.1:8123`.
   before writing them (see `docs/ARCHITECTURE.md` §8).
 - **Frontend pages:** present each page to the user and get their approval
   before creating it. The UI is stock shadcn/ui (Base UI, Nova) with the
-  `sidebar-07` layout (`packages/frontend/AGENTS.md`).
+  `sidebar-07` layout (`apps/frontend/AGENTS.md`).
 - **Dependencies and generated code:** add or generate them with the
   command the tool's own docs recommend (`pnpm add`, `pnpm dlx shadcn@latest
   add`, `cargo add`, ...), never by editing a manifest or copying files in
@@ -664,7 +664,7 @@ cargo run -p organizer`, then sign in with `http://127.0.0.1:8123`.
   published image every day; a finding to accept goes in
   `osv-scanner.toml` with its reason.
 - **Generated, do not edit by hand:** `CHANGELOG.md` and the version fields
-  (release-please), `packages/frontend/src/routeTree.gen.ts` (TanStack
+  (release-please), `apps/frontend/src/routeTree.gen.ts` (TanStack
   Router), `pnpm-lock.yaml` and `Cargo.lock` (use the
   package managers), and `packages/sdk/src` (`mise run gen:sdk`).
 - **License:** Hippocratic License 3.0. No GPL or AGPL dependencies (MIT,

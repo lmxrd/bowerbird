@@ -40,21 +40,21 @@ generated from it, then the frontend, then the backend that embeds it.
 ## Layout
 
 ```
-packages/backend/                   the Rust server
-packages/backend/src/main.rs        start, configuration, graceful stop, `organizer healthcheck`
-packages/backend/src/lib.rs         the app: API routes, Swagger UI (SWAGGER_UI), the embedded frontend
-packages/backend/src/config.rs      environment variables
-packages/backend/src/db.rs          SQLite: one writer, read-only readers, migrations
-packages/backend/src/error.rs       the API's error type and body
-packages/backend/src/frontend.rs    the embedded frontend and its cache policy
-packages/backend/src/openapi.rs     the OpenAPI document's title and tags
-packages/backend/src/routes/        the handlers
-packages/backend/src/bin/openapi.rs writes the spec (mise run gen:spec)
-packages/backend/migrations/        the schema, one numbered file per change
-packages/backend/tests/api.rs       the API's integration tests
-packages/frontend/                  the React app
+apps/server/                   the Rust server
+apps/server/src/main.rs        start, configuration, graceful stop, `organizer healthcheck`
+apps/server/src/lib.rs         the app: API routes, Swagger UI (SWAGGER_UI), the embedded frontend
+apps/server/src/config.rs      environment variables
+apps/server/src/db.rs          SQLite: one writer, read-only readers, migrations
+apps/server/src/error.rs       the API's error type and body
+apps/server/src/frontend.rs    the embedded frontend and its cache policy
+apps/server/src/openapi.rs     the OpenAPI document's title and tags
+apps/server/src/routes/        the handlers
+apps/server/src/bin/openapi.rs writes the spec (mise run gen:spec)
+apps/server/migrations/        the schema, one numbered file per change
+apps/server/tests/api.rs       the API's integration tests
+apps/frontend/                  the React app
 packages/sdk/                       the API client, generated from the spec (not committed)
-packages/e2e/                       the end-to-end smoke tests (Playwright)
+tooling/e2e/                       the end-to-end smoke tests (Playwright)
 scripts/                            the Linux build and the end-to-end run
 docs/                               the architecture and the prior art
 ```
@@ -63,9 +63,9 @@ docs/                               the architecture and the prior art
 
 - **Unit tests** next to the code (Rust `#[cfg(test)]`, and Vitest for the
   frontend's pure logic in `src/lib`).
-- **Integration tests** of the API (`packages/backend/tests/api.rs`, on
+- **Integration tests** of the API (`apps/server/tests/api.rs`, on
   axum-test, against an in-memory database).
-- **End-to-end smoke tests** (`packages/e2e`, Playwright): a few flows a
+- **End-to-end smoke tests** (`tooling/e2e`, Playwright): a few flows a
   real browser runs against the built image.
 
 CI runs the checks and the tests on every pull request, the desktop app's

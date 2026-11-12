@@ -1,4 +1,4 @@
-//! The embedded frontend: the built files of `packages/frontend/dist`, served with
+//! The embedded frontend: the built files of `apps/frontend/dist`, served with
 //! the cache policy they need, and the SPA fallback to index.html.
 
 use crate::state::AppState;

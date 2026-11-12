@@ -37,7 +37,7 @@ jobs:
       - uses: googleapis/release-please-action@v5
         id: release
 
-      # release-please bumps the version in packages/backend/Cargo.toml but
+      # release-please bumps the version in apps/server/Cargo.toml but
       # cannot bump the organizer entry of Cargo.lock (its toml updater does
       # not match it), so cargo does it on the release PR's branch. `-w`
       # touches only the workspace's own packages, never a dependency.
@@ -96,7 +96,7 @@ jobs:
           # The OpenAPI spec (written by the build, identical on both
           # runners), attached once.
           if [ "${{ matrix.arch }}" = amd64 ]; then
-            cp packages/backend/dist/openapi.json release/
+            cp apps/server/dist/openapi.json release/
           fi
           (cd release && sha256sum -- * > "SHA256SUMS-${{ matrix.arch }}")
           gh release upload "$TAG" release/* --clobber

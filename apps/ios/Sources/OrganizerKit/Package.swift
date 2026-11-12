@@ -13,7 +13,7 @@ let package = Package(
     // Dynamic: one copy for the app, its extension and the tests.
     .library(name: "OrganizerKit", type: .dynamic, targets: ["OrganizerKit"]),
     // Static: for the desktop app's File Provider extension and its tool
-    // on macOS (packages/desktop/macos), which have no Frameworks folder
+    // on macOS (apps/desktop/macos), which have no Frameworks folder
     // to share a dynamic one in.
     .library(name: "OrganizerKitStatic", type: .static, targets: ["OrganizerKit"]),
   ],

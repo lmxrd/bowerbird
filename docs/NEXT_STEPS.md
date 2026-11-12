@@ -30,7 +30,7 @@ Tick an item off by removing it; add new ones under the right heading.
         member opens and writes);
   - [ ] a whole remote drive's error banner (`RemoteDriveBanner`).
 - [ ] **Flaky test:** `link_passwords_are_limited_as_sign_ins`
-      (`packages/backend/tests/api.rs`) sometimes gets 204 instead of 429
+      (`apps/server/tests/api.rs`) sometimes gets 204 instead of 429
       under load. It is time-based; make it deterministic.
 
 ## From earlier milestones

@@ -72,17 +72,17 @@ app out.
 ## 4. The code
 
 ```
-packages/ios/        Organizer.xcodeproj made by XcodeGen from project.yml:
+apps/ios/        Organizer.xcodeproj made by XcodeGen from project.yml:
                      the app, the share extension, a Swift package
                      (OrganizerKit: the generated client, the upload
                      client, the session) shared by both, and tests
-packages/android/    Gradle (Kotlin DSL, a version catalog): :app (with the
+apps/android/    Gradle (Kotlin DSL, a version catalog): :app (with the
                      share activity), :core (the generated client, the
                      upload client, the session), tests
 ```
 
 - **Clients from the spec.** iOS: Apple's swift-openapi-generator as a
-  build plugin, reading `packages/backend/target/dist/openapi.yaml`
+  build plugin, reading `apps/server/target/dist/openapi.yaml`
   (`mise run gen:spec` first). Android: the openapi-generator Gradle
   plugin (`kotlin` with OkHttp and kotlinx.serialization) into `:core`'s
   build directory. Neither is committed, as the web's.

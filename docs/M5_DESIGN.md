@@ -1,7 +1,7 @@
 # M5 design proposal — the desktop app
 
 Status: **accepted 2026-11-07** (§9). **M5a built** (2026-11-08):
-`packages/sync` (the engine, §3) and `packages/desktop` (the app, §4);
+`packages/sync` (the engine, §3) and `apps/desktop` (the app, §4);
 a CI job checks, tests and bundles it on macOS, Windows and Linux,
 unsigned (§8). The bundles are not attached to releases yet. M5b (on-demand files)
 is next, with its own short design. It covers
@@ -77,11 +77,11 @@ A library crate with no UI, tested on its own:
 - **Pause and resume**, offline handled (queued until the server is back),
   and a status the UI shows: up to date, syncing N, paused, offline, error.
 
-## 4. The app (`packages/desktop`)
+## 4. The app (`apps/desktop`)
 
 Tauri 2. The Rust side runs the engine; the window is React with the web
 app's components (shadcn/ui, the same look), in a small Vite app of its own
-that imports from `packages/frontend`, so nothing is written twice.
+that imports from `apps/frontend`, so nothing is written twice.
 
 - **Tray** (menu bar on macOS): the status line, "Open Organizer folder",
   "Review the drop box (3)", "Pause syncing", "Settings…", "Quit".
@@ -110,8 +110,8 @@ feed, listings, downloads, uploads, moves, deletes and the events.
 
 ## 6. Repository and tools
 
-- A **Cargo workspace at the root** with `packages/backend`,
-  `packages/sync` and `packages/desktop/src-tauri`: one lockfile, one
+- A **Cargo workspace at the root** with `apps/server`,
+  `packages/sync` and `apps/desktop/src-tauri`: one lockfile, one
   target directory, shared versions of tokio and reqwest. The backend's
   tasks and Dockerfile build stays as it is (`-p organizer`).
 - mise tasks: `dev:desktop`, `build:desktop` (this system's app bundle),

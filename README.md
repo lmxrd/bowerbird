@@ -483,7 +483,7 @@ command reads the same repository: `restic -r <repository> snapshots`.
 
 ## iOS app
 
-A native iPhone and iPad app (iOS 18 or later), in `packages/ios`: browse
+A native iPhone and iPad app (iOS 18 or later), in `apps/ios`: browse
 and upload your files, review the drop box, and **share** files, photos
 and links to Organizer from any app, to the drop box (with a note) or into
 a folder you pick. You sign in once with your server's address, on your
@@ -497,7 +497,7 @@ It is not in the App Store yet: build it for the simulator with
 
 ## Android app
 
-`packages/android`: a native app (Android 10 and later) to browse your
+`apps/android`: a native app (Android 10 and later) to browse your
 files, review the drop box, and **share into Organizer from any app**:
 files, photos, text and links go to the drop box (with a note and the
 per-item options your drop-box settings allow) or to a folder you pick.
@@ -513,11 +513,11 @@ the web.
 
 It is not on Google Play yet. To build a debug APK and install it on a
 device or emulator (`adb`): `mise run build:android`, then
-`adb install packages/android/app/build/outputs/apk/debug/app-debug.apk`.
+`adb install apps/android/app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Desktop app
 
-`packages/desktop`: an app for macOS, Windows and Linux that keeps folders
+`apps/desktop`: an app for macOS, Windows and Linux that keeps folders
 of your server **in sync with your computer, both ways**, and lives in the
 tray (the menu bar on macOS). You sign in with the server's address, then
 in your browser as on the web; the app's token is kept in the system's
@@ -563,7 +563,7 @@ Open the first time.
 File Provider extension only when the app is signed with an Apple team:
 until then, adding an on-demand folder says so. To build one that works on
 your own Mac, set your team's id as `DEVELOPMENT_TEAM` in
-`packages/desktop/macos/project.yml` (a free Apple account's Personal Team
+`apps/desktop/macos/project.yml` (a free Apple account's Personal Team
 is enough; a paid Developer ID, notarised, to give the app to others), set
 `CODE_SIGN_STYLE` to `Automatic` and `CODE_SIGN_IDENTITY` to
 `Apple Development` there, and sign the app with the same team

@@ -3,10 +3,10 @@
 # the desktop app's window (which imports the frontend's components). One
 # install and one lockfile at this root.
 packages:
-  - packages/frontend
+  - apps/frontend
   - packages/sdk
-  - packages/e2e
-  - packages/desktop
+  - tooling/e2e
+  - apps/desktop
 
 # A version published less than a day ago is not installed (pnpm picks an
 # older one that fits, or fails): most hijacked releases are found and pulled

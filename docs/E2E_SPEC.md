@@ -175,7 +175,7 @@ An encrypted file is a header and segments:
 
 ## 7. The server's part
 
-The API (`packages/backend/src/routes/encryption.rs`, in the OpenAPI spec
+The API (`apps/server/src/routes/encryption.rs`, in the OpenAPI spec
 under the tag Encryption):
 
 | | |

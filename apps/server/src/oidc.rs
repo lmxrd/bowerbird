@@ -160,7 +160,7 @@ impl Env {
 
 /// Why a sign-in failed, as the code the login page shows a message for.
 /// Nothing more is said to the browser; the details are logged. The codes
-/// are listed again in `packages/frontend/src (the login page)`: change both.
+/// are listed again in `apps/frontend/src (the login page)`: change both.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Failure {
     /// Single sign-on is off, the provider cannot be reached, or there is

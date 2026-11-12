@@ -94,7 +94,7 @@ chrono = "0.4.45"
 webauthn-authenticator-rs = { version = "0.6.2", features = ["softpasskey"] }
 
 [features]
-# Builds without packages/frontend/dist, for the `openapi` binary only (never ship it):
+# Builds without apps/frontend/dist, for the `openapi` binary only (never ship it):
 # the frontend client is generated from the spec, so the spec comes first.
 spec = []
 

@@ -7372,6 +7372,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "organizer-decrypt"
+version = "0.0.0"
+dependencies = [
+ "organizer-e2e-crypto",
+ "rustls",
+ "tokio",
+]
+
+[[package]]
 name = "organizer-desktop"
 version = "0.0.0"
 dependencies = [

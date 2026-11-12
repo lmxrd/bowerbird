@@ -1,6 +1,6 @@
 //! On-demand folders on macOS (docs/M5B_DESIGN.md §2): each is a File
 //! Provider domain, kept by the extension in the app's bundle
-//! (`packages/desktop/macos`), not by the sync engine. File Provider is an
+//! (`apps/desktop/macos`), not by the sync engine. File Provider is an
 //! Objective-C API, and this crate forbids unsafe code: rather than calling
 //! it through FFI, the app runs the small Swift tool beside its executable
 //! (`Contents/MacOS/organizer-fileprovider`), one command per call, the

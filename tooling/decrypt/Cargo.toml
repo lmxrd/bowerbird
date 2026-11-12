@@ -1,0 +1,14 @@
+[package]
+name = "organizer-decrypt"
+version = "0.0.0"
+description = "organizer-decrypt: decrypt an encrypted folder by hand (docs/E2E_SPEC.md §10)"
+edition = "2024"
+
+[dependencies]
+organizer-e2e-crypto = { path = "../../packages/e2e-crypto" }
+rustls = { version = "0.23.45", default-features = false, features = ["ring", "std", "tls12"] }
+tokio = { version = "1.53.2", features = ["full"] }
+
+# No unsafe code, as in the backend.
+[lints.rust]
+unsafe_code = "forbid"

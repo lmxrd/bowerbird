@@ -868,12 +868,12 @@ it** (nothing is committed; served only with `SWAGGER_UI`):
   `{"error": "..."}`. A failure on our side is logged with its causes and
   answered with a plain 500: no internal detail reaches the client.
 - The spec is written by the `openapi` binary, built with `--features spec`,
-  the only build allowed to compile without `packages/frontend/dist`
+  the only build allowed to compile without `apps/frontend/dist`
   (`allow_missing` in `frontend.rs`). Never ship a `spec` build. The order
   is always spec → SDK → frontend build → backend build with the frontend
   embedded (the mise tasks keep it).
 
-**rust-embed** needs `packages/frontend/dist` to exist to compile, even in
+**rust-embed** needs `apps/frontend/dist` to exist to compile, even in
 debug (the mise tasks that compile the backend build the frontend first).
 Do not run raw `cargo` commands on a fresh checkout without
 `mise run build:frontend`.

@@ -28,7 +28,7 @@ uuid = { version = "1.29.0", features = ["v4", "serde"] }
 # The tests run organizer-decrypt against the server, in-process, and its database.
 axum = "0.8.9"
 axum-extra = { version = "0.12.6", features = ["cookie", "cookie-signed"] }
-organizer = { path = "../backend" }
+organizer = { path = "../../apps/server" }
 
 # No unsafe code, as in the backend.
 [lints.rust]

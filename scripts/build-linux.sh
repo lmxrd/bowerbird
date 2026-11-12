@@ -10,7 +10,7 @@
 #   PROFILE   the cargo profile (default: release)
 #   FEATURES  cargo features (default: none)
 #
-# The frontend must be built first (rust-embed embeds packages/frontend/dist):
+# The frontend must be built first (rust-embed embeds apps/frontend/dist):
 # `mise run build:linux` does both.
 set -eu
 
@@ -25,7 +25,7 @@ case "$arch" in
 esac
 profile=${PROFILE:-release}
 
-cd "$(dirname "$0")/../packages/backend"
+cd "$(dirname "$0")/../apps/server"
 cargo zigbuild --profile "$profile" --features "${FEATURES:-}" --target "$triple"
 
 # Cargo has no stable flag to put one artifact elsewhere (--artifact-dir

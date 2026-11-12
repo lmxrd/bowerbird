@@ -75,9 +75,9 @@ space) is the system's. No signing is needed to run it locally.
 
 ## 5. What changes elsewhere
 
-- `packages/ios` gains a macOS target for OrganizerKit (it is already a
+- `apps/ios` gains a macOS target for OrganizerKit (it is already a
   Swift package; the macOS platform is added).
-- `packages/desktop` gains the extension in its macOS bundle and the
+- `apps/desktop` gains the extension in its macOS bundle and the
   Windows module; the settings' mode becomes selectable.
 - No server change.
 
@@ -110,7 +110,7 @@ space) is the system's. No signing is needed to run it locally.
   denies unsafe code elsewhere and every other crate forbids it. Pins:
   "Always keep on this device" hydrates at the next pass, "Free up space"
   dehydrates (the system sets the attributes; the provider acts on them).
-- **macOS** (`packages/desktop/macos`): the extension and the
+- **macOS** (`apps/desktop/macos`): the extension and the
   `organizer-fileprovider` tool, an XcodeGen project beside the Tauri app
   (it ships in that bundle and is built by its `build:desktop`, not by the
   iOS project), on OrganizerKit with the macOS platform added (linked
