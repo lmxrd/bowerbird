@@ -15,12 +15,43 @@ files on disk.
 
 ## Running it
 
-The image is not published yet. To build and run it from a checkout (see
-[CONTRIBUTING.md](CONTRIBUTING.md) for the tools):
+With a compose file, `compose.yaml`:
+
+```yaml
+services:
+  organizer:
+    image: ghcr.io/lmxrd/bowerbird:latest
+    ports:
+      - "8000:8000" # to the reverse proxy only, when there is one
+    volumes:
+      - organizer_data:/data
+      # - /mnt/big-disk/files:/files # STORAGE_URL on a bigger disk
+    environment:
+      # HTTPS is the reverse proxy's job (Caddy, Traefik, nginx, ...):
+      # Organizer speaks plain HTTP. Behind one, set these two —
+      # PUBLIC_URL is where users reach the server (passkeys belong to
+      # its host, so they need it; the session cookie and federation do
+      # too):
+      # PUBLIC_URL: https://files.example.com
+      # TRUST_PROXY lets the proxy's X-Forwarded-For stand for the
+      # client's address (the rate limits use it):
+      # TRUST_PROXY: "true"
+      # STORAGE_URL: the base of all file content (every user's tree, the
+      # shared drives, uploads, the drop box) — a path (default /data/files),
+      # or s3://endpoint/bucket/prefix, with the credentials in
+      # STORAGE_ACCESS_KEY / STORAGE_SECRET_KEY (STORAGE_REGION if not
+      # us-east-1):
+      # STORAGE_URL: /files
+      # STORAGE_URL: s3://s3.example.com/organizer-files
+      # STORAGE_ACCESS_KEY: ${S3_ACCESS_KEY}
+      # STORAGE_SECRET_KEY: ${S3_SECRET_KEY}
+volumes:
+  organizer_data:
+  # organizer_files:
+```
 
 ```sh
-mise run build:docker
-podman run -d --name organizer -p 8000:8000 -v organizer-data:/data organizer
+podman compose up -d   # or: docker compose up -d
 ```
 
 Then open <http://localhost:8000>.
@@ -34,7 +65,7 @@ Everything else will be set in the app.
 | -------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `PORT`         | `8000`                     | The port the server listens on                                                                                                       |
 | `DATA_DIR`     | `data` (`/data` in the image) | Organizer's own files: the database, the drop box, uploads, caches, shared drives                                                  |
-| `FILES_DIR`    | —                          | The folder of the first superadmin's files (the account made at setup), when you set it here rather than on the setup page: an existing folder (a share that already holds files is fine), indexed where it is. It then cannot be changed in the settings. Every other user has their own folder. Unset: chosen at setup, by default a folder in `DATA_DIR` |
+| `STORAGE_URL`    | `<DATA_DIR>/files`         | The base of the file content: every user's files tree, the shared drives, the in-progress uploads and the drop box. A folder path (mount it, e.g. a bigger disk), or `s3://endpoint/bucket/prefix` with `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` (`STORAGE_REGION` if not us-east-1): then new drives are made in the bucket. `DATA_DIR` itself keeps only the database, the embeddings, the key files and the backup work dir |
 | `DATABASE_URL` | `sqlite:<DATA_DIR>/organizer.db` | The database (SQLite only for now). It must be on a local disk, not on an NFS or SMB share. Back it up with the data dir if you move it |
 | `VECTOR_DATABASE_URL` | `turso:<DATA_DIR>/vectors.db` | Where the embeddings are kept (only with an embeddings model). The scheme names the engine; Turso (`turso:<path>`) is the only one so far. They are made again from your files, so they need no backup |
 | `PUBLIC_URL`   | —                          | Where Organizer is reached from, e.g. `https://files.example.com`. Passkeys need it: a passkey belongs to its host |
@@ -70,9 +101,9 @@ Everything else will be set in the app.
 | `FEDERATION_ALLOW_PRIVATE` | `false`      | `true` lets federation reach other servers at private and local addresses (your own network, this machine) and over plain http, as OCM allows for testing setups. Off, other servers are reached over https at public addresses only |
 | `TRASH_DAYS`          | (each user's, default `30`) | Days before what is in the trash is deleted for good; `0` keeps it until the trash is emptied. Set, it is the same for everyone and cannot be changed in the settings |
 | `VERSIONS_HOURS`, `VERSIONS_DAYS`, `VERSIONS_MONTHS` | (each user's, default `24`, `30`, `12`) | How long a file's earlier contents are kept: every one for so many hours, then one a day for so many days, then one a month for so many months; all `0` keeps none. Kept only for changes made through Organizer (web, apps, WebDAV), not for changes made directly in the files folder. Set, a rule is the same for everyone |
-| `BACKUP_REPOSITORY`   | (the superadmin settings) | Where the backups go: an absolute path (another disk, a mounted share) or `s3://bucket/path`. With `BACKUP_PASSWORD`, backups run. See [Backups](#backups) |
+| `BACKUP_URL`         | (the superadmin settings) | Where the backups go: an absolute path (another disk, a mounted share) or `s3://endpoint/bucket/path` (the URL's host is the endpoint; `s3+http://` for plain http). With `BACKUP_PASSWORD`, backups run. See [Backups](#backups) |
 | `BACKUP_PASSWORD`     | (the superadmin settings) | The repository's password: it encrypts the backups, and they cannot be read without it. Keep a copy away from this server |
-| `BACKUP_S3_ENDPOINT`, `BACKUP_S3_REGION`, `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY` | (the superadmin settings) | For an `s3://` repository: the endpoint (empty for AWS), the region (default `us-east-1`) and the keys |
+| `BACKUP_REGION`, `BACKUP_ACCESS_KEY`, `BACKUP_SECRET_KEY` | (the superadmin settings) | For an `s3://` `BACKUP_URL`: the region (default `us-east-1`) and the keys |
 | `BACKUP_SCHEDULE`     | `daily 03:00`       | When backups run: `daily HH:MM` (the server's time zone) or `every Nh` |
 | `BACKUP_KEEP`         | `7,4,12`            | Which backups are kept: the last of so many days, weeks and months (the newest always) |
 | `VAPID_PRIVATE_KEY`   | (made at first start) | The key the server signs its Web Push requests with: base64url, its 32 raw bytes (as `npx web-push generate-vapid-keys` prints it). Unset, one is made and kept in the database. Changing it stops the notices of every browser and phone until they are turned on again. See [Notifications](#notifications) |
@@ -95,7 +126,7 @@ and optionally as a superadmin) works once, for 7 days; Organizer sends no
 email, you send the link. Open sign-up and single sign-on making accounts
 are two switches there (`SIGNUP_OPEN`, `OIDC_CREATE_USERS`). Each user has
 their own drop box and their **My drive**, their own files in their files
-folder: by default `<DATA_DIR>/users/<id>/files`, or an existing folder the
+folder: by default `<STORAGE_URL>/users/<id>/files`, or an existing folder the
 superadmin sets. A superadmin can make or remove superadmins, set a storage limit (writes
 through Organizer past it are refused; the trash and versions count, and
 changes made directly in a files folder are counted, not stopped), disable
@@ -168,7 +199,7 @@ instead).
 
 Each drive keeps its trash and versions in a hidden `.organizer` folder at
 its root (on a server from before drives they are moved there from
-`<DATA_DIR>/users/<id>/` at the first start). It is never listed, synced,
+`<STORAGE_URL>/users/<id>/` at the first start). It is never listed, synced,
 searched or shown over WebDAV, and no file or folder at a drive's root may
 take that name.
 

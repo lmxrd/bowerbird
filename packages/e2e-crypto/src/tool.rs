@@ -339,14 +339,14 @@ pub struct Backup {
 impl Backup {
     /// The backup of `email`'s files: `database` the restored database
     /// file, `data_dir` the restored data folder (where a user's own files
-    /// folder is by default), `files_dir` the user's files folder when it
-    /// is elsewhere (`FILES_DIR`, a folder chosen in the settings, or
+    /// folder is by default), `storage_url` the user's files folder when it
+    /// is elsewhere (`STORAGE_URL`, a folder chosen in the settings, or
     /// restored to another place).
     pub async fn open(
         database: &Path,
         data_dir: Option<&Path>,
         email: &str,
-        files_dir: Option<&Path>,
+        storage_url: Option<&Path>,
     ) -> Result<Self, ToolError> {
         use sqlx::sqlite::SqliteConnectOptions;
         if !database.is_file() {
@@ -361,31 +361,26 @@ impl Backup {
         let db = sqlx::SqlitePool::connect_with(options)
             .await
             .map_err(source_error)?;
-        let row: Option<(Uuid, Option<String>, bool)> = sqlx::query_as(
-            "SELECT id, files_root, owns_files_dir FROM users WHERE email = ?1 COLLATE NOCASE",
-        )
-        .bind(email)
-        .fetch_optional(&db)
-        .await
-        .map_err(source_error)?;
-        let (user, stored_root, owns_files_dir) =
+        let row: Option<(Uuid, Option<String>)> =
+            sqlx::query_as("SELECT id, files_root FROM users WHERE email = ?1 COLLATE NOCASE")
+                .bind(email)
+                .fetch_optional(&db)
+                .await
+                .map_err(source_error)?;
+        let (user, stored_root) =
             row.ok_or_else(|| ToolError::Usage(format!("No user {email} in that database")))?;
-        let files_root = match (files_dir, stored_root) {
+        let files_root = match (storage_url, stored_root) {
             (Some(dir), _) => dir.to_path_buf(),
             (None, Some(root)) => PathBuf::from(root),
             (None, None) => data_dir
                 .ok_or_else(|| ToolError::Usage("Give the data folder with --data-dir".into()))?
+                .join("files")
                 .join("users")
                 .join(user.to_string())
                 .join("files"),
         };
         if !files_root.is_dir() {
-            // The first admin's files are in FILES_DIR when it is set.
-            let hint = if owns_files_dir {
-                "give FILES_DIR's folder with --files-dir"
-            } else {
-                "give it with --files-dir"
-            };
+            let hint = "give STORAGE_URL's folder with --storage-url";
             return Err(ToolError::Usage(format!(
                 "No files folder at {} ({hint})",
                 files_root.display()
@@ -525,7 +520,7 @@ From a restored backup (the server need not run):
   organizer-decrypt --data-dir /restore/data --user me@example.com \\
                     --folder /Private --out ./Private
   (--database FILE when the database is elsewhere than DATA_DIR/organizer.db;
-   --files-dir DIR for the user's files folder: FILES_DIR, a folder chosen
+   --storage-url DIR for the user's files folder: STORAGE_URL, a folder chosen
    in the settings, or wherever it was restored)
 
 --folder names the encrypted folder (the one with the lock) by its path in
@@ -540,7 +535,7 @@ pub struct Args {
     pub api_key: Option<String>,
     pub data_dir: Option<PathBuf>,
     pub database: Option<PathBuf>,
-    pub files_dir: Option<PathBuf>,
+    pub storage_url: Option<PathBuf>,
     pub user: Option<String>,
     pub which: Which,
     pub out: PathBuf,
@@ -556,7 +551,7 @@ impl Args {
             match arg.as_str() {
                 "--recovery-key" => recovery = true,
                 "--help" | "-h" => return Err(ToolError::Usage(USAGE.into())),
-                "--server" | "--api-key" | "--data-dir" | "--database" | "--files-dir"
+                "--server" | "--api-key" | "--data-dir" | "--database" | "--storage-url"
                 | "--user" | "--folder" | "--folder-id" | "--out" => {
                     let value = args
                         .next()
@@ -591,7 +586,7 @@ impl Args {
             api_key: values.remove("api-key"),
             data_dir: values.remove("data-dir").map(PathBuf::from),
             database: values.remove("database").map(PathBuf::from),
-            files_dir: values.remove("files-dir").map(PathBuf::from),
+            storage_url: values.remove("storage-url").map(PathBuf::from),
             user: values.remove("user"),
             which,
             out,
@@ -627,7 +622,7 @@ pub async fn run(args: &Args, secret: &Secret) -> Result<Report, ToolError> {
                 &database,
                 args.data_dir.as_deref(),
                 args.user.as_deref().unwrap_or_default(),
-                args.files_dir.as_deref(),
+                args.storage_url.as_deref(),
             )
             .await?;
             decrypt_folder(&backup, secret, &args.which, &args.out).await

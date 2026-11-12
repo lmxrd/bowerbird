@@ -268,9 +268,6 @@ pub struct Session {
     /// the superadmin or one of their teams): it cannot be turned off.
     /// Signed out: `TOTP_REQUIRED`.
     pub totp_required: bool,
-    /// Whether `FILES_DIR` sets the folder of the files: the setup page
-    /// does not ask for it.
-    pub files_locked: bool,
     /// Whether passkeys can be used here (`PUBLIC_URL` set, and not
     /// single sign-on only): the login page offers them.
     pub passkeys: bool,
@@ -386,7 +383,6 @@ async fn session(
         oidc,
         password_login: state.oidc.passwords_allowed(),
         totp_required,
-        files_locked: state.files.files_dir().is_some(),
         passkeys: crate::routes::passkeys::passkeys_on(&state),
         signup: !needs_setup && crate::users::signup_offered(&state).await?,
     }))
@@ -413,7 +409,7 @@ pub struct Setup {
     pub password: String,
     /// The folder of the files, an absolute path on the server: an existing
     /// folder Organizer can write to, such as a share that already holds
-    /// files. Left out: `FILES_DIR`, or else a folder in the data dir.
+    /// files. Left out: the default, under `STORAGE_URL`.
     #[serde(default)]
     pub files_root: Option<String>,
 }
@@ -443,17 +439,12 @@ async fn setup(
     let password = validate_password(&body.password)?;
     let files_root = match body.files_root.as_deref().map(str::trim) {
         None | Some("") => None,
-        Some(_) if state.files.files_dir().is_some() => {
-            return Err(HttpError::bad_request(
-                "The files folder is set by FILES_DIR",
-            ));
-        }
         Some(root) => Some(state.files.check_root(std::path::Path::new(root))?),
     };
     let id = Uuid::now_v7();
     let inserted = sqlx::query(
-        "INSERT INTO users (id, email, password_hash, is_superadmin, files_root, owns_files_dir)
-         SELECT ?3, ?1, ?2, 1, ?4, 1 WHERE NOT EXISTS (SELECT 1 FROM users)",
+        "INSERT INTO users (id, email, password_hash, is_superadmin, files_root)
+         SELECT ?3, ?1, ?2, 1, ?4 WHERE NOT EXISTS (SELECT 1 FROM users)",
     )
     .bind(email)
     .bind(hash_password(&password))

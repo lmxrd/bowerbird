@@ -286,7 +286,11 @@ mod tests {
     #[tokio::test]
     async fn a_user_gets_the_events_of_their_own_feed_only() {
         let db = crate::db::open(":memory:").await.unwrap();
-        let files = crate::files::Files::new(db, std::env::temp_dir(), None);
+        let files = crate::files::Files::new(
+            db,
+            std::env::temp_dir(),
+            crate::config::StorageUrl::Local(std::env::temp_dir()),
+        );
         let (me, someone) = (Uuid::now_v7(), Uuid::now_v7());
         let mut events = Events {
             user_id: me,
@@ -304,7 +308,11 @@ mod tests {
     #[tokio::test]
     async fn drop_box_events_have_their_own_name_and_follow_a_lag() {
         let db = crate::db::open(":memory:").await.unwrap();
-        let files = crate::files::Files::new(db, std::env::temp_dir(), None);
+        let files = crate::files::Files::new(
+            db,
+            std::env::temp_dir(),
+            crate::config::StorageUrl::Local(std::env::temp_dir()),
+        );
         let me = Uuid::now_v7();
         let mut events = Events {
             user_id: me,

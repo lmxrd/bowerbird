@@ -38,12 +38,79 @@ pub fn data_dir() -> PathBuf {
     var("DATA_DIR").unwrap_or_else(|| "data".into()).into()
 }
 
-/// `FILES_DIR`: the files root of the first superadmin (the one made at setup),
-/// which then cannot be changed in the settings; every other user has their
-/// own. Unset: the setup page and the superadmin settings decide, by default a
-/// folder in the data dir.
-pub fn files_dir() -> Option<PathBuf> {
-    var("FILES_DIR").map(PathBuf::from)
+/// An `s3://endpoint/bucket/prefix` URL (`s3+http://` for a plain-http
+/// endpoint, e.g. a local MinIO): the endpoint, bucket and prefix.
+pub fn parse_s3_url(url: &str) -> Result<(String, String, String), String> {
+    let (scheme, rest) = url.split_once("://").ok_or("no scheme")?;
+    let endpoint_scheme = match scheme {
+        "s3" => "https",
+        "s3+http" => "http",
+        other => return Err(format!("not an s3 URL: {other}://")),
+    };
+    let (host, path) = rest
+        .split_once('/')
+        .ok_or_else(|| "no bucket: s3://endpoint/bucket/prefix".to_string())?;
+    if host.is_empty() {
+        return Err("no endpoint host: s3://endpoint/bucket/prefix".into());
+    }
+    let (bucket, prefix) = match path.split_once('/') {
+        Some((bucket, prefix)) => (bucket.to_string(), prefix.trim_end_matches('/').to_string()),
+        None => (path.to_string(), String::new()),
+    };
+    if bucket.is_empty() {
+        return Err("no bucket: s3://endpoint/bucket/prefix".into());
+    }
+    Ok((format!("{endpoint_scheme}://{host}"), bucket, prefix))
+}
+
+/// `STORAGE_URL`: where the file content is — a local path (by default a
+/// `files` folder in the data dir), `file://…`, or an `s3://endpoint/bucket/prefix`
+/// URL, whose host is the endpoint and whose credentials come from
+/// `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` (`STORAGE_REGION` for the
+/// region). The data dir itself always keeps the database, the embeddings,
+/// the key files and the scratch (uploads, the drop box, the backup work dir).
+pub enum StorageUrl {
+    Local(PathBuf),
+    S3 {
+        endpoint: String,
+        region: String,
+        bucket: String,
+        prefix: String,
+    },
+}
+
+pub fn storage_url(data_dir: &Path) -> Result<StorageUrl, String> {
+    match var("STORAGE_URL") {
+        None => Ok(StorageUrl::Local(data_dir.join("files"))),
+        Some(url) if url.starts_with("s3://") || url.starts_with("s3+http://") => {
+            let (endpoint, bucket, prefix) =
+                parse_s3_url(&url).map_err(|e| format!("STORAGE_URL: {e}"))?;
+            Ok(StorageUrl::S3 {
+                endpoint,
+                region: var("STORAGE_REGION").unwrap_or_else(|| "us-east-1".into()),
+                bucket,
+                prefix,
+            })
+        }
+        Some(url) if url.starts_with("file://") => Ok(StorageUrl::Local(PathBuf::from(
+            url.trim_start_matches("file://"),
+        ))),
+        Some(other) if other.contains("://") => Err(format!(
+            "STORAGE_URL must be a folder path, file://…, or s3://endpoint/bucket/prefix, not `{other}`"
+        )),
+        Some(path) => Ok(StorageUrl::Local(PathBuf::from(path))),
+    }
+}
+
+/// The credentials of an `s3://` STORAGE_URL.
+pub fn storage_access_key() -> Result<String, String> {
+    var("STORAGE_ACCESS_KEY")
+        .ok_or_else(|| "STORAGE_ACCESS_KEY is needed with an s3:// STORAGE_URL".into())
+}
+
+pub fn storage_secret_key() -> Result<String, String> {
+    var("STORAGE_SECRET_KEY")
+        .ok_or_else(|| "STORAGE_SECRET_KEY is needed with an s3:// STORAGE_URL".into())
 }
 
 /// The database's file, from `DATABASE_URL`, by default `organizer.db` in

@@ -31,15 +31,14 @@ CREATE TABLE users (
   totp_secret TEXT,
   totp_pending TEXT,
   totp_last_step INTEGER NOT NULL DEFAULT 0,
-  -- The user's tree (docs/M1_DESIGN.md §4): NULL is FILES_DIR, or else
-  -- <DATA_DIR>/users/<id>/files.
+  -- The user's tree (docs/M1_DESIGN.md §4): NULL is the default, under
+  -- STORAGE_URL (a path or an s3:// bucket, whose drives are backend drives).
   files_root TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   feed_epoch INTEGER NOT NULL DEFAULT 0,
   feed_floor INTEGER NOT NULL DEFAULT 0,
   disabled_at TEXT,
   last_seen_at TEXT,
-  owns_files_dir INTEGER NOT NULL DEFAULT 0,
   shared_seen_at TEXT,
   primary_team_id BLOB REFERENCES teams(id) ON DELETE SET NULL
 );
@@ -389,7 +388,11 @@ CREATE INDEX drives_backend ON drives (backend_id);
 
 CREATE TRIGGER users_my_drive AFTER INSERT ON users
 BEGIN
-  INSERT INTO drives (id, kind, user_id, created_by) VALUES (NEW.id, 'my', NEW.id, NEW.id);
+  -- An s3:// STORAGE_URL: the bucket is the default backend (`files_backend`
+  -- in the server settings), and the new drive is made in it.
+  INSERT INTO drives (id, kind, user_id, created_by, backend_id)
+  VALUES (NEW.id, 'my', NEW.id, NEW.id,
+          (SELECT json_extract(value, '$') FROM server_settings WHERE key = 'files_backend'));
 END;
 
 CREATE TRIGGER settings_of_drive AFTER DELETE ON drives
@@ -1033,7 +1036,7 @@ CREATE TABLE server_settings (
 INSERT INTO server_settings (key, value) VALUES
   ('oidc', '{"issuer":"","client_id":"","client_secret":"","scopes":"","label":"","redirect_url":""}'),
   ('ai', '{"default_model":null,"proposals":null,"embeddings":null,"images":null,"scans":null,"audio":null,"concurrency":1,"timeout_seconds":120}'),
-  ('backup', '{"repository":"","s3_endpoint":"","s3_region":"","s3_access_key":"","s3_secret_key":"","password":"","schedule":"daily 03:00","keep_daily":7,"keep_weekly":4,"keep_monthly":12}'),
+  ('backup', '{"url":"","region":"","access_key":"","secret_key":"","password":"","schedule":"daily 03:00","keep_daily":7,"keep_weekly":4,"keep_monthly":12}'),
   ('backup_status', '{"last_started":null,"last_finished":null,"last_error":null,"last_snapshot":null,"last_added":null,"last_total":null,"snapshots":null,"last_check":null}'),
   ('signup', '{"open_signup":false,"oidc_create_users":false}'),
   ('federation', '{"mode":"off"}');

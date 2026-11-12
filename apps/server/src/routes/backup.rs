@@ -40,20 +40,19 @@ pub fn router() -> OpenApiRouter<AppState> {
 pub struct BackupSettings {
     /// A repository and a password are set: backups run.
     pub enabled: bool,
-    /// A path, or `s3://bucket/path`; empty when there are no backups.
-    pub repository: String,
-    pub s3_endpoint: String,
-    pub s3_region: String,
-    pub s3_access_key: String,
-    pub s3_secret_key_set: bool,
+    /// An absolute path or `s3://endpoint/bucket/path`; empty when there are no backups.
+    pub url: String,
+    pub region: String,
+    pub access_key: String,
+    pub secret_key_set: bool,
     pub password_set: bool,
     /// `daily HH:MM` or `every Nh`.
     pub schedule: String,
     pub keep_daily: i64,
     pub keep_weekly: i64,
     pub keep_monthly: i64,
-    /// The fields set by an environment variable (`repository` by
-    /// `BACKUP_REPOSITORY`, the keep rules by `BACKUP_KEEP`, ...), which
+    /// The fields set by an environment variable (`url` by
+    /// `BACKUP_URL`, the keep rules by `BACKUP_KEEP`, ...), which
     /// cannot be changed here.
     pub locked: Vec<String>,
     pub status: BackupStatus,
@@ -67,11 +66,10 @@ pub struct BackupSettings {
 /// The settings to change (or to test); a field left out stays as it is.
 #[derive(Deserialize, ToSchema, Default)]
 pub struct UpdateBackupSettings {
-    pub repository: Option<String>,
-    pub s3_endpoint: Option<String>,
-    pub s3_region: Option<String>,
-    pub s3_access_key: Option<String>,
-    pub s3_secret_key: Option<String>,
+    pub url: Option<String>,
+    pub region: Option<String>,
+    pub access_key: Option<String>,
+    pub secret_key: Option<String>,
     /// The repository's password. Changing it does not re-encrypt an
     /// existing repository: the new one must be the one it was made with.
     pub password: Option<String>,
@@ -91,7 +89,7 @@ async fn view(state: &AppState) -> Result<BackupSettings, HttpError> {
     .await?;
     Ok(BackupSettings {
         enabled: settings.enabled(),
-        s3_secret_key_set: !settings.s3_secret_key.is_empty(),
+        secret_key_set: !settings.secret_key.is_empty(),
         password_set: !settings.password.is_empty(),
         locked: state
             .backup
@@ -107,10 +105,9 @@ async fn view(state: &AppState) -> Result<BackupSettings, HttpError> {
             .await?
             .map(|t| format!("{t:.3}")),
         running: running > 0,
-        repository: settings.repository,
-        s3_endpoint: settings.s3_endpoint,
-        s3_region: settings.s3_region,
-        s3_access_key: settings.s3_access_key,
+        url: settings.url,
+        region: settings.region,
+        access_key: settings.access_key,
         schedule: settings.schedule,
         keep_daily: settings.keep_daily,
         keep_weekly: settings.keep_weekly,
@@ -137,19 +134,10 @@ fn merge(
         }
     };
     for (field, value, slot) in [
-        ("repository", body.repository, &mut stored.repository),
-        ("s3_endpoint", body.s3_endpoint, &mut stored.s3_endpoint),
-        ("s3_region", body.s3_region, &mut stored.s3_region),
-        (
-            "s3_access_key",
-            body.s3_access_key,
-            &mut stored.s3_access_key,
-        ),
-        (
-            "s3_secret_key",
-            body.s3_secret_key,
-            &mut stored.s3_secret_key,
-        ),
+        ("url", body.url, &mut stored.url),
+        ("region", body.region, &mut stored.region),
+        ("access_key", body.access_key, &mut stored.access_key),
+        ("secret_key", body.secret_key, &mut stored.secret_key),
         ("password", body.password, &mut stored.password),
         ("schedule", body.schedule, &mut stored.schedule),
     ] {
@@ -157,7 +145,7 @@ fn merge(
             check(field)?;
             // The password and the keys are taken as they are.
             *slot = match field {
-                "password" | "s3_secret_key" | "s3_access_key" => value,
+                "password" | "secret_key" | "access_key" => value,
                 _ => value.trim().to_string(),
             };
         }

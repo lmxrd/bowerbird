@@ -289,8 +289,8 @@ to your files, or by its id with `--folder-id`.
 
    Your files folder is found as the server would find it (the folder
    chosen in the settings, else `<data>/users/<your id>/files`); give it
-   with `--files-dir` when it was restored elsewhere, or when it is the
-   first admin's `FILES_DIR`.
+   with `--storage-url` when it was restored elsewhere, or when it is not
+   the default under `STORAGE_URL`.
 3. Type the passphrase (or `--recovery-key`) as above.
 
 It prints how many files and folders it decrypted; anything it could not

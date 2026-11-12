@@ -135,7 +135,7 @@ The server is one crate (`organizer`: the binary, its library, and the `openapi`
 
 ### 3.3 Configuration
 
-- **Environment variables**, unprefixed like Potoo's and Woodmouse's (`PORT`, `PUBLIC_URL`, `DATABASE_URL`, `DATA_DIR`, `TRUST_PROXY`, `SWAGGER_UI`, `TOTP_REQUIRED`, `OIDC_*` including `OIDC_ONLY`, `FILES_DIR`, `RUST_LOG`, …), for infrastructure needed before the DB opens: database, data dir, public URL, bind address, log level, trusted proxy settings.
+- **Environment variables**, unprefixed like Potoo's and Woodmouse's (`PORT`, `PUBLIC_URL`, `DATABASE_URL`, `DATA_DIR`, `TRUST_PROXY`, `SWAGGER_UI`, `TOTP_REQUIRED`, `OIDC_*` including `OIDC_ONLY`, `STORAGE_URL`, `RUST_LOG`, …), for infrastructure needed before the DB opens: database, data dir, public URL, bind address, log level, trusted proxy settings.
 - `DATABASE_URL` is an sqlx SQLite URL. It **defaults to `<DATA_DIR>/organizer.db`**, and self-hosters can override it.
   - The database must be on a local disk, even when the files are on a network share: SQLite's locking and WAL are unsafe on NFS/SMB. A data dir on a share is the main reason to override it.
   - A database outside the data dir must be backed up with it (§4.1).
@@ -184,26 +184,31 @@ As in Potoo and Woodmouse:
 
 ### 4.1 Storage, identity and source of truth
 
-- Data dir layout (single user now, multi-user ready):
+- Layout (`DATA_DIR` keeps only what must be local; `STORAGE_URL` is the content
+  base — a path, default `<DATA_DIR>/files`, or `s3://bucket/prefix` whose
+  drives are backend drives):
   ```
-  <data>/
+  <DATA_DIR>/
   ├── organizer.db             # SQLite (metadata, FTS5, sqlite-vec, jobs, sessions); DATABASE_URL can move it
+  ├── vectors.db               # embeddings (VECTOR_DATABASE_URL can move it)
+  ├── secret.key               # the server key (SECRET_KEY_FILE can move it)
+  ├── ocm-key                  # the federation signing key (OCM_KEY_FILE can move it)
+  └── backups/                 # rustic work dir: cache and the db staging copy
+  <STORAGE_URL>/
+  ├── uploads/                 # in-progress resumable uploads (local scratch)
+  ├── inbox/<user-id>/         # drop box staging (local scratch)
   ├── users/<user-id>/files/   # the user's real tree, by default (see "Existing folders")
-  ├── users/<user-id>/inbox/   # drop box staging
-  ├── users/<user-id>/trash/   # trash (M3)
-  ├── uploads/                 # in-progress resumable uploads
-  ├── versions/                # per-change versions (M3)
-  └── cache/                   # snapshots, extracted text, thumbnails
+  └── drives/<drive-id>/       # shared drives, by default (trash/ and versions/ inside each tree)
   ```
 - **File identity**: every file and folder gets a stable ID in SQLite. External renames ("vanished + appeared" pairs) are matched by size + BLAKE3 hash, so IDs, undo history and sync state survive moves made outside Organizer.
 - **Disk wins**: the filesystem is authoritative for files; the DB's file index can be rebuilt from it, and the rest of the DB is data (see Backups below). Every operation that changes the disk is **journaled**: an intent row is written, then the filesystem operation runs, then the intent is committed. On startup, unfinished intents are replayed or rolled back, followed by a rescan.
 - SQLite holds: users, tokens, file index (ID, path, size, mtime, hash, mime), drop box items, placement proposals and undo log, journal, settings, job queue, sync change log, FTS5 and vector tables.
 - **Existing folders**: a user's tree can be a directory that already exists, such as a NAS share mounted into the container. Organizer indexes it in place and does not copy it.
   - `users/<user-id>/files/` is only the default.
-  - Organizer's own folders (inbox, trash, versions, uploads, cache) stay in the data dir and are never created inside the user's tree.
+  - Organizer's own scratch (inbox, uploads) stays under the local base (`STORAGE_URL` when a path, else `DATA_DIR`) and is never created inside the user's tree; trash and versions live inside each tree.
   - The first index of a large tree runs in the background, hashing throttled as in §4.2.
 - **Backups contain data only**:
-  - The files (tree, versions, trash) and the database: users, credentials, API keys, settings, drop box items, proposals, the undo log and corrections.
+  - The files (tree, versions, trash), the database (users, credentials, API keys, settings, drop box items, proposals, the undo log and corrections) and the key files (`secret.key`, `ocm-key`).
   - Sessions, the job queue, in-progress uploads and the cache are not data. They are left out or dropped on restore.
   - The file index, FTS5 and embeddings could be rebuilt from disk, but they are kept: rebuilding re-hashes and re-embeds everything and gives files new IDs, which breaks undo and sync state.
   - Until rustic backups (M3), an operator copies the data dir (and the database, if `DATABASE_URL` puts it elsewhere) while the server is stopped.

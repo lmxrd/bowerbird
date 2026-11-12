@@ -1,7 +1,7 @@
 //! `organizer backup …`: the backups from the command line, for the superadmin,
 //! with the server stopped. The settings are the stored ones under the
 //! `BACKUP_*` variables when the database is there, the variables alone
-//! when it is not (the server was lost: `BACKUP_REPOSITORY` and
+//! when it is not (the server was lost: `BACKUP_URL` and
 //! `BACKUP_PASSWORD` are then needed).
 //!
 //! ```text
@@ -30,7 +30,7 @@ pub async fn main(args: &[String]) -> anyhow::Result<()> {
     let settings = settings(&db_path).await?;
     anyhow::ensure!(
         settings.enabled(),
-        "Backups are not set up: set BACKUP_REPOSITORY and BACKUP_PASSWORD (and the S3 ones)"
+        "Backups are not set up: set BACKUP_URL and BACKUP_PASSWORD (and BACKUP_ACCESS_KEY / BACKUP_SECRET_KEY for s3://)"
     );
     match args.first().map(String::as_str) {
         Some("snapshots") => {

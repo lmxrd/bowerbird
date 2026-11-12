@@ -50,8 +50,10 @@ async fn main() -> anyhow::Result<()> {
     let public_url = config::public_url();
     let limits = Arc::new(organizer::limits::Limits::default());
     // The users' trees: the journal is settled, then each tree is indexed
-    // and watched in the background.
-    let files = organizer::files::Files::with_background(db.clone(), data_dir, config::files_dir());
+    // and watched in the background. `STORAGE_URL` may be an `s3://bucket/prefix`
+    // URL instead of a path: the file content is then in that bucket.
+    let storage_url = config::storage_url(&data_dir).map_err(anyhow::Error::msg)?;
+    let files = organizer::files::Files::with_background(db.clone(), data_dir.clone(), storage_url);
     files.set_retention_env(organizer::retention::Partial::from_env().map_err(anyhow::Error::msg)?);
     // The storage backends (docs/M7C_DESIGN.md): the server key over their
     // secrets (`SECRET_KEY_FILE`, else made in the data dir at the first
@@ -59,6 +61,23 @@ async fn main() -> anyhow::Result<()> {
     files
         .backends()
         .set_key_file(config::var("SECRET_KEY_FILE").map(std::path::PathBuf::from));
+    // An `s3://` STORAGE_URL: the bucket is the default backend, and new
+    // drives are made in it (the `users_my_drive` trigger reads this).
+    if let organizer::config::StorageUrl::S3 {
+        endpoint,
+        region,
+        bucket,
+        prefix,
+    } = files.storage_url()
+    {
+        let backend = files
+            .backends()
+            .ensure_files_backend(endpoint, region, bucket, prefix)
+            .await
+            .map_err(anyhow::Error::msg)?;
+        organizer::server_settings::save(db.writer(), "files_backend", &backend.to_string())
+            .await?;
+    }
     files
         .backends()
         .set_allow_private(env_flag("BACKENDS_ALLOW_PRIVATE")?);

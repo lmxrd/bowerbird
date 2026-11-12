@@ -48,8 +48,8 @@ struct Options {
     limits: organizer::limits::Limits,
     /// `SWAGGER_UI`.
     swagger_ui: bool,
-    /// `FILES_DIR`.
-    files_dir: Option<std::path::PathBuf>,
+    /// `STORAGE_URL`.
+    storage_url: Option<std::path::PathBuf>,
     /// The AI_* variables.
     ai: organizer::ai::Env,
     /// `LINKS_ALLOW_PRIVATE`: the tests' pages are on this machine.
@@ -69,7 +69,7 @@ impl Default for Options {
             public_url: None,
             limits: organizer::limits::Limits::with_bursts(1_000, 1_000, 1_000),
             swagger_ui: false,
-            files_dir: None,
+            storage_url: None,
             ai: organizer::ai::Env::default(),
             links_allow_private: false,
             backup: organizer::backup::Env::default(),
@@ -91,7 +91,17 @@ async fn spawn(options: Options) -> TestApp {
                 .unwrap(),
         ),
         oidc: Arc::new(oidc::Oidc::load(&db, options.oidc).await),
-        files: organizer::files::Files::new(db.clone(), data_dir, options.files_dir),
+        files: organizer::files::Files::new(
+            db.clone(),
+            data_dir.clone(),
+            options
+                .storage_url
+                .map(organizer::config::StorageUrl::Local)
+                .unwrap_or_else(|| {
+                    organizer::config::storage_url(&data_dir)
+                        .expect("a valid STORAGE_URL in the tests")
+                }),
+        ),
         db: db.clone(),
         trust_proxy: true,
         swagger_ui: options.swagger_ui,
@@ -2515,7 +2525,8 @@ impl Drop for TempDir {
 }
 
 /// The files folder: the default, one chosen at setup (a share that already
-/// holds files), changed by the admin, or locked by FILES_DIR.
+/// holds files), changed by the admin. STORAGE_URL is only the base the
+/// default is under; it locks nothing.
 #[tokio::test]
 async fn the_files_folder_is_chosen_at_setup_and_changed_by_the_admin() {
     let share = TempDir::new();
@@ -2557,7 +2568,6 @@ async fn the_files_folder_is_chosen_at_setup_and_changed_by_the_admin() {
         json!({
             "files_root": share.0.to_str().unwrap(),
             "default": false,
-            "locked": false,
             "available": true,
         })
     );
@@ -2585,16 +2595,18 @@ async fn the_files_folder_is_chosen_at_setup_and_changed_by_the_admin() {
         401
     );
 
-    // FILES_DIR decides, and locks it.
-    let locked = spawn(Options {
-        files_dir: Some(share.0.clone()),
+    // STORAGE_URL is the base of the default folder, and locks nothing: the
+    // admin can still choose another one.
+    let base = TempDir::new();
+    let app = spawn(Options {
+        storage_url: Some(base.0.clone()),
         ..Options::default()
     })
     .await;
-    let admin = admin_session(&locked).await;
+    let admin = admin_session(&app).await;
     let storage = json(
         request(
-            &locked,
+            &app,
             Method::GET,
             "/api/superadmin/storage",
             Some(&admin),
@@ -2603,17 +2615,27 @@ async fn the_files_folder_is_chosen_at_setup_and_changed_by_the_admin() {
         .await,
     )
     .await;
-    assert_eq!(storage["locked"], json!(true));
-    assert_eq!(storage["files_root"], json!(share.0.to_str().unwrap()));
+    let users = users_by_email(&app, &admin).await;
+    let admin_id = users["admin@example.com"]["id"].as_str().unwrap();
+    let default_root = base
+        .0
+        .join("users")
+        .join(admin_id)
+        .join("files")
+        .to_str()
+        .unwrap()
+        .to_string();
+    assert_eq!(storage["default"], json!(true));
+    assert_eq!(storage["files_root"], json!(default_root));
     let response = request(
-        &locked,
+        &app,
         Method::PATCH,
         "/api/superadmin/storage",
         Some(&admin),
-        Some(json!({ "files_root": null })),
+        Some(json!({ "files_root": share.0.to_str().unwrap() })),
     )
     .await;
-    assert_eq!(response.status_code(), 400);
+    assert_eq!(response.status_code(), 200);
 }
 
 /// Set up with a files folder that already holds files, and wait until it
@@ -6380,7 +6402,7 @@ async fn backups_are_made_browsed_and_restored_from() {
         )
     };
     assert_eq!(
-        put(json!({ "repository": "relative/path", "password": "pw" }))
+        put(json!({ "url": "relative/path", "password": "pw" }))
             .await
             .status_code(),
         400
@@ -6394,14 +6416,13 @@ async fn backups_are_made_browsed_and_restored_from() {
         Method::POST,
         "/api/superadmin/backup/test",
         Some(&admin),
-        Some(json!({ "repository": repository.to_str().unwrap(), "password": "correct horse" })),
+        Some(json!({ "url": repository.to_str().unwrap(), "password": "correct horse" })),
     )
     .await;
     assert_eq!(test.status_code(), 200, "{}", test.text());
     assert_eq!(json(test).await["exists"], json!(false));
     let view = json(
-        put(json!({ "repository": repository.to_str().unwrap(), "password": "correct horse" }))
-            .await,
+        put(json!({ "url": repository.to_str().unwrap(), "password": "correct horse" })).await,
     )
     .await;
     assert_eq!(view["enabled"], json!(true));
@@ -7562,7 +7583,7 @@ async fn storage_limits_refuse_writes_past_them() {
 async fn removing_a_user_deletes_the_default_folder_but_keeps_an_existing_one() {
     let app = spawn_app().await;
     let admin = admin_session(&app).await;
-    let data_dir = app.state.files.data_dir().to_path_buf();
+    let base = app.state.files.local_base().to_path_buf();
 
     // Bea's default folder, with a file.
     let (bea, bea_id) = invited_user(&app, &admin, "bea@example.com").await;
@@ -7579,7 +7600,7 @@ async fn removing_a_user_deletes_the_default_folder_but_keeps_an_existing_one() 
         .bytes(body.into())
         .await;
     assert_eq!(response.status_code(), 201);
-    let bea_dir = data_dir.join("users").join(&bea_id);
+    let bea_dir = base.join("users").join(&bea_id);
     assert!(bea_dir.join("files/a.txt").is_file());
 
     // Cy's existing folder, set by the admin.
@@ -7662,32 +7683,44 @@ async fn removing_a_user_deletes_the_default_folder_but_keeps_an_existing_one() 
     assert_eq!(response.status_code(), 404);
 }
 
-/// `FILES_DIR` is the first admin's folder only: a new user gets their own,
-/// which the admin may change, and the first admin's stays locked.
+/// `STORAGE_URL` is the base of the file content: every user's default folder
+/// is under it (the first admin's included), and the admin may still choose
+/// another folder for anyone.
 #[tokio::test]
-async fn files_dir_belongs_to_the_first_admin() {
-    let share = TempDir::new();
+async fn storage_url_is_the_base_of_every_users_files() {
+    let base = TempDir::new();
     let app = spawn(Options {
-        files_dir: Some(share.0.clone()),
+        storage_url: Some(base.0.clone()),
         ..Options::default()
     })
     .await;
     let admin = admin_session(&app).await;
     let (_bea, bea_id) = invited_user(&app, &admin, "bea@example.com").await;
     let users = users_by_email(&app, &admin).await;
+    let root_of = |email: &str| {
+        let id = users[email]["id"].as_str().unwrap();
+        base.0
+            .join("users")
+            .join(id)
+            .join("files")
+            .to_str()
+            .unwrap()
+            .to_string()
+    };
     let first = &users["admin@example.com"]["files"];
-    assert_eq!(first["files_root"], json!(share.0.to_str().unwrap()));
-    assert_eq!(first["locked"], json!(true));
+    assert_eq!(first["files_root"], json!(root_of("admin@example.com")));
+    assert_eq!(first["default"], json!(true));
     let bea = &users["bea@example.com"]["files"];
+    assert_eq!(bea["files_root"], json!(root_of("bea@example.com")));
     assert_eq!(bea["default"], json!(true));
-    assert_eq!(bea["locked"], json!(false));
+    // The admin may still choose another folder for anyone.
+    let share = TempDir::new();
     let admin_id = users["admin@example.com"]["id"]
         .as_str()
         .unwrap()
         .to_string();
     let response = patch_user(&app, &admin, &admin_id, json!({ "files_root": null })).await;
-    assert_eq!(response.status_code(), 400);
-    // Bea may not take FILES_DIR.
+    assert_eq!(response.status_code(), 200);
     let response = patch_user(
         &app,
         &admin,
@@ -7695,7 +7728,7 @@ async fn files_dir_belongs_to_the_first_admin() {
         json!({ "files_root": share.0.to_str().unwrap() }),
     )
     .await;
-    assert_eq!(response.status_code(), 400);
+    assert_eq!(response.status_code(), 200);
 }
 
 /// Invites and sign-ups count against the sign-in limits: per address
@@ -14049,7 +14082,7 @@ async fn drives_move_between_backends() {
     )
     .await;
     assert_eq!(deleted.status_code(), 200);
-    let folder = app.state.files.data_dir().join("drives").join(&drive);
+    let folder = app.state.files.local_base().join("drives").join(&drive);
     assert!(folder.join("plan.txt").is_file());
 
     // Its manager may not use that storage (the superadmin's only); the

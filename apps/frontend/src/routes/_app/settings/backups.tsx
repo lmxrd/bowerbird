@@ -44,7 +44,7 @@ export const Route = createFileRoute("/_app/settings/backups")({
   ),
 });
 
-const texts = ["repository", "s3_endpoint", "s3_region", "s3_access_key"] as const;
+const texts = ["url", "region", "access_key"] as const;
 const keeps = [
   { key: "keep_daily", unit: "daily" },
   { key: "keep_weekly", unit: "weekly" },
@@ -59,10 +59,9 @@ const variable = (key: string) =>
 
 function formOf(data: BackupSettings): Form {
   return {
-    repository: data.repository,
-    s3_endpoint: data.s3_endpoint,
-    s3_region: data.s3_region,
-    s3_access_key: data.s3_access_key,
+    url: data.url,
+    region: data.region,
+    access_key: data.access_key,
     keep_daily: String(data.keep_daily),
     keep_weekly: String(data.keep_weekly),
     keep_monthly: String(data.keep_monthly),
@@ -128,12 +127,12 @@ function Backups() {
     for (const { key } of keeps) if (changed[key] !== undefined) body[key] = Number(changed[key]);
     const text = formatSchedule(schedule);
     if (text !== data.schedule && !locked("schedule")) body.schedule = text;
-    if (secretKey !== undefined && !locked("s3_secret_key")) body.s3_secret_key = secretKey;
+    if (secretKey !== undefined && !locked("secret_key")) body.secret_key = secretKey;
     if (password !== undefined && !locked("password")) body.password = password;
     return body;
   };
 
-  const s3 = form?.repository.startsWith("s3://") ?? false;
+  const s3 = form?.url.startsWith("s3://") ?? false;
   const textField = (key: (typeof texts)[number], label: string, placeholder: string) =>
     form && (
       <SettingField id={key} label={label} lockedBy={lockedBy(key)}>
@@ -165,25 +164,28 @@ function Backups() {
         >
           <FieldGroup>
             <BackupStatus data={data} />
-            {textField("repository", "Repository", "/mnt/backup/organizer or s3://bucket/path")}
+            {textField(
+              "url",
+              "Backup URL",
+              "/mnt/backup/organizer or s3://s3.example.com/bucket/path",
+            )}
             {s3 && (
               <>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {textField("s3_endpoint", "S3 endpoint", "Empty for AWS")}
-                  {textField("s3_region", "Region", "us-east-1")}
+                  {textField("region", "Region", "us-east-1")}
+                  {textField("access_key", "Access key", "")}
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {textField("s3_access_key", "Access key", "")}
                   <SettingField
-                    id="s3_secret_key"
+                    id="secret_key"
                     label="Secret key"
-                    lockedBy={lockedBy("s3_secret_key")}
+                    lockedBy={lockedBy("secret_key")}
                   >
                     <SecretInput
-                      id="s3_secret_key"
-                      set={data.s3_secret_key_set}
+                      id="secret_key"
+                      set={data.secret_key_set}
                       value={secretKey ?? ""}
-                      disabled={locked("s3_secret_key")}
+                      disabled={locked("secret_key")}
                       onChange={setSecretKey}
                     />
                   </SettingField>

@@ -74,7 +74,7 @@ attributes it was set with: a browser ignores a `__Host-` removal without
 that signs real ID tokens with the keys in `tests/fixtures/` (test only).
 
 **Users** (`users.rs`, `routes/users.rs`, docs/M6A_DESIGN.md): the ways in
-are setup (the first superadmin, who owns `FILES_DIR`: `users.owns_files_dir`),
+are setup (the first superadmin like any user: their tree is the default under `STORAGE_URL`),
 invites (`invites`, 7 days, once, found by the token's SHA-256; the token is
 kept while pending for "Copy link"), open sign-up and single sign-on. The
 switches are the `signup` document of the `server_settings` table with
@@ -789,11 +789,13 @@ bucket: above) is the source of truth, and the index (`nodes`) describes
 it; for what Organizer writes, the index is the truth (it is written with
 it). A tree is a drive's (`Files::tree(drive_id)`, `drive_root` for one on
 the disk).
-- My drive's tree is at its user's files root: `FILES_DIR` for the first superadmin
-  (`owns_files_dir`; locks it), else `users.files_root`, else
-  `<DATA_DIR>/users/<id>/files` (`Files::root_for` with a `StoredRoot`).
-  Drives' roots are apart (`check_apart`). Organizer's own folders
-  (uploads, caches, the drop box) are in the data dir, never in the tree,
+- My drive's tree is at its user's files root: `users.files_root` when the
+  superadmin chose one, else the default `<STORAGE_URL>/users/<id>/files`
+  (`Files::root_for` with a `StoredRoot`; `STORAGE_URL` is a path or an
+  `s3://bucket/prefix` whose drives are backend drives). Drives' roots are
+  apart (`check_apart`). Organizer's own folders (uploads, the drop box) are
+  scratch under the local base (`STORAGE_URL` when a path, else `DATA_DIR`),
+  never in the tree; the backup work dir is in the data dir,
   but for each drive's `.organizer/` (trash and versions);
   `Files::check_root` keeps a chosen folder and the data dir apart.
 - Everything that touches a tree holds its lock: a scan (`files/scan.rs`,

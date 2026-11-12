@@ -77,30 +77,25 @@ async fn off_thread<T: Send + 'static>(
 fn repository(settings: &Settings, cache: &Path) -> anyhow::Result<Repository<()>> {
     let mut backend = BackendOptions::default();
     match settings.s3() {
-        Some((bucket, root)) => {
+        Some((endpoint, bucket, prefix)) => {
             backend = backend.repository("opendal:s3");
             let mut options = BTreeMap::new();
-            options.insert("bucket".to_string(), bucket.to_string());
-            options.insert("root".to_string(), format!("/{root}"));
-            if !settings.s3_endpoint.is_empty() {
-                options.insert("endpoint".to_string(), settings.s3_endpoint.clone());
-            }
+            options.insert("bucket".to_string(), bucket);
+            options.insert("root".to_string(), format!("/{prefix}"));
+            options.insert("endpoint".to_string(), endpoint);
             options.insert(
                 "region".to_string(),
-                if settings.s3_region.is_empty() {
+                if settings.region.is_empty() {
                     "us-east-1".to_string()
                 } else {
-                    settings.s3_region.clone()
+                    settings.region.clone()
                 },
             );
-            options.insert("access_key_id".to_string(), settings.s3_access_key.clone());
-            options.insert(
-                "secret_access_key".to_string(),
-                settings.s3_secret_key.clone(),
-            );
+            options.insert("access_key_id".to_string(), settings.access_key.clone());
+            options.insert("secret_access_key".to_string(), settings.secret_key.clone());
             backend = backend.options(options);
         }
-        None => backend = backend.repository(settings.repository.clone()),
+        None => backend = backend.repository(settings.url.clone()),
     }
     let backends = backend.to_backends()?;
     let options = RepositoryOptions::default().cache_dir(cache.to_path_buf());
@@ -229,24 +224,31 @@ pub async fn sources(
     copy: PathBuf,
 ) -> anyhow::Result<(Vec<PathBuf>, Manifest)> {
     let data_dir = state.files.data_dir().to_path_buf();
+    let local_base = state.files.local_base().to_path_buf();
     let real = |p: &Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
-    // Each user's files folder; those in the data dir come with it.
-    let roots: Vec<(Uuid, Option<String>, bool)> =
-        sqlx::query_as("SELECT id, files_root, owns_files_dir FROM users")
-            .fetch_all(state.db.reader())
-            .await?;
-    let users_dir = real(&data_dir.join("users"));
-    let drives_dir = real(&data_dir.join("drives"));
+    // Each user's files folder; those under STORAGE_URL come with it.
+    let roots: Vec<(Uuid, Option<String>)> = sqlx::query_as("SELECT id, files_root FROM users")
+        .fetch_all(state.db.reader())
+        .await?;
+    let users_dir = real(&local_base.join("users"));
+    let drives_dir = real(&local_base.join("drives"));
     let mut manifest = Manifest {
         database: copy,
         users: BTreeMap::new(),
         drives: BTreeMap::new(),
     };
     let mut sources = vec![staging.to_path_buf()];
+    // The key files, so that a backup alone restores the server's secrets.
+    for key in ["secret.key", "ocm-key"] {
+        let file = data_dir.join(key);
+        if file.is_file() {
+            sources.push(file);
+        }
+    }
     if users_dir.is_dir() {
         sources.push(users_dir.clone());
     }
-    // The shared drives on the server's storage: in the data dir, or each
+    // The shared drives on the server's storage: under STORAGE_URL, or each
     // in the folder chosen for it (its trash and versions inside). Drives
     // in a storage backend are not backed up by the server
     // (docs/M7C_DESIGN.md §5): the provider's versioning is the way.
@@ -267,11 +269,8 @@ pub async fn sources(
         }
         manifest.drives.insert(drive, root);
     }
-    for (user, files_root, owns_files_dir) in roots {
-        let stored = crate::files::StoredRoot {
-            files_root,
-            owns_files_dir,
-        };
+    for (user, files_root) in roots {
+        let stored = crate::files::StoredRoot { files_root };
         let root = real(&state.files.root_for(user, &stored));
         if !root.starts_with(&users_dir) && root.is_dir() && !sources.contains(&root) {
             sources.push(root.clone());

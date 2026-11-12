@@ -11,7 +11,6 @@ import { errorMessage } from "@/lib/api";
 export const Route = createFileRoute("/setup")({ component: Setup });
 
 function Setup() {
-  const { session } = Route.useRouteContext();
   const router = useRouter();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -60,21 +59,19 @@ function Setup() {
             />
             <FieldDescription>At least 10 characters.</FieldDescription>
           </Field>
-          {!session.files_locked && (
-            <Field>
-              <FieldLabel htmlFor="files-root">Folder of your files (optional)</FieldLabel>
-              <Input
-                id="files-root"
-                placeholder="/mnt/nas/files"
-                value={filesRoot}
-                onChange={(e) => setFilesRoot(e.target.value)}
-              />
-              <FieldDescription>
-                A folder on the server that may already hold files. Leave it empty for one in the
-                data folder.
-              </FieldDescription>
-            </Field>
-          )}
+          <Field>
+            <FieldLabel htmlFor="files-root">Folder of your files (optional)</FieldLabel>
+            <Input
+              id="files-root"
+              placeholder="/mnt/nas/files"
+              value={filesRoot}
+              onChange={(e) => setFilesRoot(e.target.value)}
+            />
+            <FieldDescription>
+              A folder on the server that may already hold files. Leave it empty for the default one
+              under STORAGE_URL.
+            </FieldDescription>
+          </Field>
           {setup.isError && <FieldError>{errorMessage(setup.error)}</FieldError>}
           <Button type="submit" disabled={setup.isPending}>
             Create account

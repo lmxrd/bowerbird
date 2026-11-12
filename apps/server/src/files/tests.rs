@@ -29,7 +29,11 @@ async fn setup() -> Setup {
         .execute(db.writer())
         .await
         .unwrap();
-    let files = Files::new(db, data_dir, None);
+    let files = Files::new(
+        db,
+        data_dir.clone(),
+        crate::config::storage_url(&data_dir).unwrap(),
+    );
     let root = files.default_root(user);
     fs::create_dir_all(&root).unwrap();
     Setup {
@@ -496,36 +500,34 @@ async fn a_new_files_root_is_indexed_from_scratch() {
 }
 
 #[tokio::test]
-async fn files_dir_locks_the_root() {
+async fn storage_url_is_the_base_of_the_roots_and_the_scratch() {
     let s = setup().await;
-    let share = s.dir.join("share");
-    fs::create_dir_all(&share).unwrap();
+    let base = s.dir.join("base");
+    fs::create_dir_all(&base).unwrap();
     let files = Files::new(
         s.files.db().clone(),
         s.files.data_dir().to_path_buf(),
-        Some(share.clone()),
+        crate::config::StorageUrl::Local(base.clone()),
     );
-    let first = crate::files::StoredRoot {
+    // The default root is under the base, a chosen one is used as given.
+    let stored = crate::files::StoredRoot { files_root: None };
+    assert_eq!(
+        files.root_for(s.user, &stored),
+        base.join("users").join(s.user.to_string()).join("files")
+    );
+    let stored = crate::files::StoredRoot {
         files_root: Some("/elsewhere".into()),
-        owns_files_dir: true,
-    };
-    assert_eq!(files.root_for(s.user, &first), share);
-    // Another user's is their own.
-    let other = crate::files::StoredRoot {
-        files_root: Some("/elsewhere".into()),
-        owns_files_dir: false,
     };
     assert_eq!(
-        files.root_for(s.user, &other),
+        files.root_for(s.user, &stored),
         std::path::PathBuf::from("/elsewhere")
     );
-    sqlx::query("UPDATE users SET owns_files_dir = 1 WHERE id = ?1")
-        .bind(s.user)
-        .execute(s.files.db().writer())
-        .await
-        .unwrap();
-    assert!(matches!(
-        files.set_root(s.user, None).await,
-        Err(FileError::Invalid(_))
-    ));
+    // The scratch (uploads, drop box) is under the base too.
+    assert_eq!(files.uploads_dir(), base.join("uploads"));
+    assert_eq!(
+        files.inbox_dir(s.user),
+        base.join("inbox").join(s.user.to_string())
+    );
+    // Nothing is locked: the root can be changed.
+    assert!(files.set_root(s.user, None).await.is_ok());
 }
