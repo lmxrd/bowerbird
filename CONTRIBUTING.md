@@ -50,7 +50,9 @@ apps/server/src/frontend.rs    the embedded frontend and its cache policy
 apps/server/src/openapi.rs     the OpenAPI document's title and tags
 apps/server/src/routes/        the handlers
 apps/server/src/bin/openapi.rs writes the spec (mise run gen:spec)
-apps/server/migrations/        the schema, one numbered file per change
+apps/server/migrations/        the schema: 0001_base.sql (the squashed base,
+                               applied in one transaction) plus one numbered
+                               file per change (0002 and up)
 apps/server/tests/api.rs       the API's integration tests
 apps/frontend/                  the React app
 packages/sdk/                       the API client, generated from the spec (not committed)

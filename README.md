@@ -241,9 +241,7 @@ speech, embeddings), a default model, and the model of each kind of work:
 the drop box's proposals (the default unless another is chosen),
 embeddings, photos and images, scanned PDFs and audio (off until a model is
 chosen). The `AI_*` variables of a connection are one more model, "from the
-environment", locked. A server that had one AI connection keeps it: its
-chat model is registered as the default and its embeddings model as the
-embeddings model. Photos (up to 20 MB, sent as they are), the pages of
+environment", locked. Photos (up to 20 MB, sent as they are), the pages of
 scanned PDFs and recordings (their first hour) are read only as each
 user's "read contents" setting and sensitive-file rules allow, once per
 content; "Read existing files again" reads what was there before a model

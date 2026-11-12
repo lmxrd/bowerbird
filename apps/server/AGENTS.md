@@ -20,9 +20,14 @@ repository root (`mise run check:backend`, `test:backend`, `dev:backend`).
   `query!` macros (they need a database at compile time). SQL is
   SQLite-flavoured (`?1` placeholders). Dynamic SQL is built only from
   fixed fragments and placeholders; every value is bound.
-- Schema changes are **new numbered files** in `migrations/`. Never edit
-  one that has shipped (its checksum is recorded). Until the first
-  release, a migration of this branch's own may still be changed.
+- Schema changes are **new numbered files** in `migrations/`, from `0002`
+  up: `0001_base.sql` is the whole pre-release schema, squashed into one
+  file that sqlx applies in a single transaction (all or nothing). Never
+  edit a file that has shipped (its checksum is recorded in
+  `_sqlx_migrations`); until the first release, `0001_base.sql` itself may
+  still be changed. The "migration NNNN" references in this file and in
+  `docs/` name the per-change files from before the squash — they are in
+  git history.
 - A clean stop (SIGTERM/SIGINT) finishes the requests in flight and closes
   the pools, which checkpoints the WAL.
 
@@ -72,7 +77,8 @@ that signs real ID tokens with the keys in `tests/fixtures/` (test only).
 are setup (the first superadmin, who owns `FILES_DIR`: `users.owns_files_dir`),
 invites (`invites`, 7 days, once, found by the token's SHA-256; the token is
 kept while pending for "Copy link"), open sign-up and single sign-on. The
-switches are the `signup_settings` row with `SIGNUP_OPEN` and
+switches are the `signup` document of the `server_settings` table with
+`SIGNUP_OPEN` and
 `OIDC_CREATE_USERS` on top (`state.joining`, a variable locks its switch);
 `/auth/session` says `signup`. Invites and sign-up go through the sign-in
 limits (the invite page per address: `Limits::address`). A disabled user
@@ -390,7 +396,8 @@ other servers' discovery and JWK Sets (kept 5 minutes, a failure 30 s,
 a JWK Set fetched again once for an unknown `kid`), the code flow's tokens
 we issued (in memory, by SHA-256, 300 s, `issue`/`redeem`) and those we
 were given (`ShareToken`, renewed before they end or on a 401). The mode
-and lists are `federation_settings`/`federation_servers` (`trust`: off,
+and lists are the `federation` document of `server_settings` and the
+`federation_servers` table (`trust`: off,
 listed, open but refused; ourselves never). The OCM endpoints are routed
 outside `/api` and the spec, as WebDAV (their API is OCM's):
 `/.well-known/ocm` (`discovery`), `/.well-known/webfinger` (our users while
@@ -535,7 +542,8 @@ registry, not one connection. The superadmin's models are `ai_models` rows
 (`owner_id` NULL; users' own models are for later): a name (one per owner),
 the provider (a genai adapter), endpoint, API key (never sent back), the
 provider's model name and the capabilities chat, vision, speech,
-embeddings. The `ai_settings` row holds the choices: the default model (a
+embeddings. The `ai` document of `server_settings` holds the choices: the
+default model (a
 chat model) and the model of each `Work` (proposals, the default unless
 another is chosen; embeddings, images, scans, audio, off while NULL), the
 concurrency and the timeout. The `AI_*` variables are one more model, `env`
@@ -709,7 +717,8 @@ without a row (under the tree's lock, so no write is half made).
 
 **Backups** (`backup/`): rustic (`rustic_core`, `rustic_backend` with
 opendal only) into a restic-format repository, a path or `s3://`.
-Settings as the AI's: a row with `BACKUP_*` on top that lock fields
+Settings are the `backup` document of `server_settings`, with the
+`BACKUP_*` variables on top that lock fields
 (`BACKUP_KEEP` locks the three keep rules). `backup::schedule` queues a
 `backup` job when due (`Schedule`: `daily HH:MM` or `every Nh`); the job
 copies the database with `VACUUM INTO` into `<DATA_DIR>/backup/staging`,
@@ -874,9 +883,11 @@ it** (nothing is committed; served only with `SWAGGER_UI`):
   embedded (the mise tasks keep it).
 
 **rust-embed** needs `apps/frontend/dist` to exist to compile, even in
-debug (the mise tasks that compile the backend build the frontend first).
-Do not run raw `cargo` commands on a fresh checkout without
-`mise run build:frontend`.
+debug. The mise tasks that only compile Rust (dev, checks, tests) satisfy
+that with an empty folder (`ensure:dist`, which is all rust-embed needs);
+the release builds (`build`, `build:linux`) depend on the real
+`build:frontend`. On a fresh checkout, run tasks through mise rather than
+raw `cargo`.
 
 **Endpoints:** everything the app serves itself lives under `/api/`; every
 other path is the embedded frontend (with the SPA fallback to

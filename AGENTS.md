@@ -51,8 +51,8 @@ not touch `data/`.
   itself with its macOS File Provider extension (below).
 - One pnpm workspace and lockfile at the root, and one Cargo workspace and
   lockfile at the root (`apps/server`, `packages/e2e-crypto`, `packages/sync`,
-  `packages/cloudfiles`, `apps/desktop/src-tauri`, one target
-  directory); `scripts/` for the
+  `packages/cloudfiles`, `apps/desktop/src-tauri`, `tooling/decrypt`, one
+  target directory); `scripts/` for the
   Linux build, the end-to-end run and the desktop bundles; `.github/` for CI, releases, Dependabot and
   the daily security scans.
 
