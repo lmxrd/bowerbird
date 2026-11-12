@@ -278,9 +278,11 @@ dir = "{{ config_root }}/apps/android"
 description = "Run the backend, frontend and sync engine tests"
 depends = ["test:backend", "test:frontend", "test:sync", "test:crypto"]
 
+# The real frontend build, not just the folder (ensure:dist): the tests
+# serve the embedded bundle (other_paths_get_the_frontend).
 [tasks."test:backend"]
 description = "The backend's unit and integration tests"
-depends = ["ensure:dist"]
+depends = ["build:frontend"]
 run = "cargo test"
 sources = ["src/**/*", "tests/**/*", "migrations/**/*", "Cargo.toml", "../../Cargo.lock"]
 dir = "{{ config_root }}/apps/server"
