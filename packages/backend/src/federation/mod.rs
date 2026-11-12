@@ -79,18 +79,28 @@ const KEEP_FAILURE: Duration = Duration::from_secs(30);
 pub const TOKEN_SECS: u64 = 300;
 
 /// The superadmin's choice (§2).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema, sqlx::Type)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema, sqlx::Type,
+)]
 #[serde(rename_all = "snake_case")]
 #[sqlx(type_name = "TEXT", rename_all = "snake_case")]
 #[schema(as = FederationMode)]
 pub enum Mode {
     /// No federation: discovery says `enabled: false`, every OCM endpoint
     /// refuses.
+    #[default]
     Off,
     /// Only the servers listed (`allowed`), which count as trusted.
     Listed,
     /// Any server but those refused.
     Open,
+}
+
+/// The server-wide federation settings, as stored in `server_settings`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Settings {
+    /// The superadmin's choice (§2).
+    pub mode: Mode,
 }
 
 /// What we make of another server.
@@ -345,21 +355,22 @@ impl Federation {
         Ok(serde_json::json!({ "keys": [jwk] }))
     }
 
+    /// The stored settings.
+    async fn stored_settings(&self) -> sqlx::Result<Settings> {
+        crate::server_settings::load(self.db.reader(), "federation").await
+    }
+
     /// The superadmin's choice.
     pub async fn mode(&self) -> sqlx::Result<Mode> {
         if self.host().is_none() {
             return Ok(Mode::Off);
         }
-        sqlx::query_scalar("SELECT mode FROM federation_settings WHERE id = 1")
-            .fetch_one(self.db.reader())
-            .await
+        Ok(self.stored_settings().await?.mode)
     }
 
     /// The mode as stored, whatever `PUBLIC_URL` says.
     pub async fn stored_mode(&self) -> sqlx::Result<Mode> {
-        sqlx::query_scalar("SELECT mode FROM federation_settings WHERE id = 1")
-            .fetch_one(self.db.reader())
-            .await
+        Ok(self.stored_settings().await?.mode)
     }
 
     /// Whether federation is on.

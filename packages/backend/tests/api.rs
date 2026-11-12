@@ -4298,51 +4298,31 @@ async fn ai_variables_are_a_locked_model() {
     assert_eq!(settings["work"]["scans"], eyes["id"]);
 }
 
-/// A server that ran with one AI connection keeps it: its chat model is
-/// registered as the default, its embeddings model as the embeddings model.
+/// A server with one AI connection (the AI_* variables) has it registered:
+/// its chat model is the default, its embeddings model the embeddings model.
 #[tokio::test]
-async fn the_old_ai_connection_becomes_registered_models() {
+async fn the_ai_connection_of_the_environment_becomes_registered_models() {
     let dir = TempDir::new();
-    // The migrations before the registry, on a database of their own.
-    let old = dir.0.join("migrations");
-    std::fs::create_dir_all(&old).unwrap();
-    let all = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("migrations");
-    for entry in std::fs::read_dir(&all).unwrap() {
-        let entry = entry.unwrap();
-        let name = entry.file_name().to_string_lossy().to_string();
-        if name.as_str() < "0020" {
-            std::fs::copy(entry.path(), old.join(&name)).unwrap();
-        }
-    }
-    let path = dir.0.join("old.db");
-    let url = format!("sqlite:{}?mode=rwc", path.display());
-    let pool = sqlx::SqlitePool::connect(&url).await.unwrap();
-    sqlx::migrate::Migrator::new(old.as_path())
-        .await
-        .unwrap()
-        .run(&pool)
-        .await
-        .unwrap();
-    sqlx::query(
-        "UPDATE ai_settings SET provider = 'openai', endpoint = 'http://gpu:11434/v1',
-           api_key = 'sk-old', model = 'qwen3', embeddings_model = 'nomic-embed-text',
-           embeddings_endpoint = 'http://embedder:8080/v1', concurrency = 2",
-    )
-    .execute(&pool)
-    .await
-    .unwrap();
-    pool.close().await;
-
-    // The server's own migrations from there.
+    let path = dir.0.join("organizer.db");
     let db = db::open(path.to_str().unwrap()).await.unwrap();
-    let ai = organizer::ai::Ai::load(&db, organizer::ai::Env::default()).await;
+    let env = organizer::ai::Env {
+        provider: Some("openai".into()),
+        endpoint: Some("http://gpu:11434/v1".into()),
+        api_key: Some("sk-old".into()),
+        model: Some("qwen3".into()),
+        embeddings_model: Some("nomic-embed-text".into()),
+        embeddings_endpoint: Some("http://embedder:8080/v1".into()),
+        concurrency: Some(2),
+        ..Default::default()
+    };
+    let ai = organizer::ai::Ai::load(&db, env).await;
     let registry = ai.registry();
     assert_eq!(registry.models.len(), 2);
     assert_eq!(registry.choices.concurrency, 2);
     let chat = ai.model_for(organizer::ai::Work::Proposals).unwrap();
     assert_eq!(
         (
-            chat.name.as_str(),
+            chat.model.as_str(),
             chat.endpoint.as_str(),
             chat.api_key.as_str(),
             chat.chat

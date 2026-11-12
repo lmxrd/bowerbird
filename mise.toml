@@ -33,17 +33,27 @@ java = "temurin-25.0.5+8.0.LTS"
 description = "Run the backend on :8000 and the frontend dev server"
 depends = ["dev:backend", "dev:frontend"]
 
-# Restarted when its code changes. It needs packages/frontend/dist to exist
-# to compile, even in debug.
+# The debug binary, built once up front (cargo is incremental, so this is a
+# no-op when fresh): both dev tasks depend on it, so the compile output stays
+# above the two servers' logs instead of being interleaved with them.
+[tasks."build:backend"]
+description = "Build the backend in dev mode"
+depends = ["ensure:dist"]
+run = "cargo build"
+sources = ["src/**/*", "migrations/**/*", "Cargo.toml", "../../Cargo.lock", "build.rs"]
+outputs = ["target/debug/organizer"]
+dir = "{{ config_root }}/packages/backend"
+
+# Restarted when its code changes.
 [tasks."dev:backend"]
 description = "Run the backend, restarted when its code changes"
-depends = ["build:frontend"]
+depends = ["build:backend"]
 run = "watchexec --restart --stop-signal SIGINT --watch src --watch migrations --watch Cargo.toml --watch ../../Cargo.lock --exts rs,toml,sql --ignore '**/target/**' -- cargo run"
 dir = "{{ config_root }}/packages/backend"
 
 [tasks."dev:frontend"]
 description = "Run the frontend dev server (/api goes to :8000)"
-depends = ["install:frontend", "gen:sdk"]
+depends = ["install:frontend", "gen:sdk", "build:backend"]
 run = "pnpm run dev"
 dir = "{{ config_root }}/packages/frontend"
 
@@ -75,10 +85,10 @@ dir = "{{ config_root }}"
 # The OpenAPI spec, written by the backend without the frontend embedded
 # (--features spec): the SDK is generated from it, so the spec comes first.
 [tasks."gen:spec"]
-description = "Write the OpenAPI spec to packages/backend/target/specs/openapi.json"
+description = "Write the OpenAPI spec to packages/backend/dist/openapi.json"
 run = "cargo run --features spec --bin openapi"
 sources = ["src/**/*", "migrations/**/*", "Cargo.toml", "../../Cargo.lock", "build.rs"]
-outputs = ["target/specs/openapi.json"]
+outputs = ["dist/openapi.json"]
 dir = "{{ config_root }}/packages/backend"
 
 # The SDK the frontend calls the API with (packages/sdk/src), generated from
@@ -88,7 +98,7 @@ dir = "{{ config_root }}/packages/backend"
 description = "Generate the TypeScript SDK (packages/sdk/src) from the spec"
 depends = ["install:frontend", "gen:spec"]
 run = "pnpm run openapi-ts"
-sources = ["../backend/target/specs/openapi.json", "openapi-ts.config.ts"]
+sources = ["../backend/dist/openapi.json", "openapi-ts.config.ts"]
 outputs = ["src/index.ts"]
 dir = "{{ config_root }}/packages/sdk"
 
@@ -134,6 +144,14 @@ sources = [
 ]
 dir = "{{ config_root }}/packages/frontend"
 
+# rust-embed fails to compile when packages/frontend/dist does not exist, but
+# dev, checks and tests never serve the bundle, so an empty directory is
+# enough: they need not wait for the frontend build. Release builds (build,
+# build:linux) still depend on the real build:frontend.
+[tasks."ensure:dist"]
+description = "Make sure packages/frontend/dist exists (rust-embed needs the folder to compile)"
+run = "mkdir -p packages/frontend/dist"
+
 # The static Linux binary (musl) the image copies, dist/organizer-linux-<arch>:
 # built outside the image, with this machine's cargo cache. ARCH=amd64 or
 # arm64 picks the architecture (default: this machine's).
@@ -158,10 +176,11 @@ run = "podman build --format docker -t organizer ."
 description = "Run every check (format, lint, types)"
 depends = ["check:frontend", "check:backend", "check:sync", "check:crypto"]
 
-# rust-embed needs packages/frontend/dist to exist to compile, hence the build.
+# rust-embed needs packages/frontend/dist to exist to compile; the checks
+# never serve the bundle, so an empty folder is enough (ensure:dist).
 [tasks."check:backend"]
 description = "rustfmt and clippy (-D warnings), with and without the spec feature"
-depends = ["build:frontend"]
+depends = ["ensure:dist"]
 run = """
 cargo fmt --check \
   && cargo clippy --all-targets -- -D warnings \
@@ -259,7 +278,7 @@ depends = ["test:backend", "test:frontend", "test:sync", "test:crypto"]
 
 [tasks."test:backend"]
 description = "The backend's unit and integration tests"
-depends = ["build:frontend"]
+depends = ["ensure:dist"]
 run = "cargo test"
 sources = ["src/**/*", "tests/**/*", "migrations/**/*", "Cargo.toml", "../../Cargo.lock"]
 dir = "{{ config_root }}/packages/backend"
@@ -290,7 +309,7 @@ run = [
 # podman and an Organizer server on this machine, and shares both ways.
 [tasks."interop:nextcloud"]
 description = "Share between a Nextcloud container and Organizer over OCM (manual: pulls an image)"
-depends = ["build:frontend"]
+depends = ["ensure:dist"]
 run = "scripts/interop-nextcloud.sh"
 
 # ---------------------------------------------------------------------------
@@ -301,7 +320,7 @@ run = "scripts/interop-nextcloud.sh"
 
 [tasks."check:crypto"]
 description = "rustfmt and clippy (-D warnings) of the encryption crate"
-depends = ["build:frontend"]
+depends = ["ensure:dist"]
 run = [
   "cargo fmt -p organizer-e2e-crypto --check",
   "cargo clippy -p organizer-e2e-crypto --all-targets -- -D warnings",
@@ -309,7 +328,7 @@ run = [
 
 [tasks."test:crypto"]
 description = "The encryption crate's tests: the format, the vectors, organizer-decrypt"
-depends = ["build:frontend"]
+depends = ["ensure:dist"]
 run = "cargo test -p organizer-e2e-crypto"
 
 # The vectors every client checks (packages/e2e-crypto/vectors.json), written
@@ -344,7 +363,7 @@ cp "$(cargo metadata --format-version 1 --no-deps | jq -r .target_directory)/rel
 # checked here and not only on the Windows runner.
 [tasks."check:sync"]
 description = "rustfmt and clippy (-D warnings) of the sync engine and its Cloud Files crate (for Windows too)"
-depends = ["gen:spec", "build:frontend"]
+depends = ["gen:spec", "ensure:dist"]
 run = [
   "cargo fmt -p organizer-sync -p organizer-cloudfiles --check",
   "cargo clippy -p organizer-sync -p organizer-cloudfiles --all-targets -- -D warnings",
@@ -353,7 +372,7 @@ run = [
 
 [tasks."test:sync"]
 description = "The sync engine's tests, against the backend in-process, and its Cloud Files crate's"
-depends = ["gen:spec", "build:frontend"]
+depends = ["gen:spec", "ensure:dist"]
 run = "cargo test -p organizer-sync -p organizer-cloudfiles"
 
 # The window's build (packages/desktop/dist), which the app embeds: the

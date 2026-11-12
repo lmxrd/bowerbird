@@ -619,14 +619,26 @@ async fn save_model(
         })?;
         // The first chat model is the default.
         if model.chat {
-            sqlx::query(
-                "UPDATE ai_settings SET default_model = ?1
-                 WHERE id = 1 AND (default_model IS NULL
-                   OR NOT EXISTS (SELECT 1 FROM ai_models WHERE id = default_model AND chat = 1))",
-            )
-            .bind(uuid)
-            .execute(state.db.writer())
-            .await?;
+            let mut choices = ai::stored_choices(&state.db).await?;
+            let current = choices
+                .default_model
+                .as_deref()
+                .and_then(|id| Uuid::parse_str(id).ok());
+            let current_is_chat = match current {
+                Some(id) => {
+                    sqlx::query_scalar::<_, bool>(
+                        "SELECT EXISTS (SELECT 1 FROM ai_models WHERE id = ?1 AND chat = 1)",
+                    )
+                    .bind(id)
+                    .fetch_one(state.db.reader())
+                    .await?
+                }
+                None => false,
+            };
+            if !current_is_chat {
+                choices.default_model = Some(uuid.to_string());
+                ai::store_choices(&state.db, &choices).await?;
+            }
         }
     } else {
         sqlx::query(

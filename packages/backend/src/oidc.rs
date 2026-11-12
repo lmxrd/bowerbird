@@ -2,7 +2,8 @@
 //! flow with PKCE and a nonce, through the `openidconnect` crate, which also
 //! checks the ID token's signature against the provider's keys (JWKS).
 //!
-//! The settings are made in the superadmin settings (the `oidc_settings` row) or
+//! The settings are made in the superadmin settings (the `oidc` document of
+//! `server_settings`) or
 //! with OIDC_* environment variables; a variable that is set wins over its
 //! field, which the superadmin settings then show as locked. They are kept here,
 //! in memory, and replaced when a superadmin saves new ones: no restart.
@@ -55,7 +56,7 @@ const DEFAULT_LABEL: &str = "Single sign-on";
 
 /// The settings, as stored and as in effect. An empty string is a field
 /// that is not set.
-#[derive(Clone, Default, PartialEq, sqlx::FromRow)]
+#[derive(Clone, Default, PartialEq, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Settings {
     pub issuer: String,
     pub client_id: String,
@@ -618,12 +619,7 @@ fn tls_or_local(url: &Url) -> bool {
 
 /// The stored settings.
 pub async fn stored(db: &Db) -> sqlx::Result<Settings> {
-    sqlx::query_as(
-        "SELECT issuer, client_id, client_secret, scopes, label, redirect_url
-         FROM oidc_settings WHERE id = 1",
-    )
-    .fetch_one(db.reader())
-    .await
+    crate::server_settings::load(db.reader(), "oidc").await
 }
 
 /// Our reqwest, as the HTTP client of the `openidconnect` crate. A type of

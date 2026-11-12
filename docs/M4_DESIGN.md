@@ -82,7 +82,7 @@ packages/android/    Gradle (Kotlin DSL, a version catalog): :app (with the
 ```
 
 - **Clients from the spec.** iOS: Apple's swift-openapi-generator as a
-  build plugin, reading `packages/backend/target/specs/openapi.yaml`
+  build plugin, reading `packages/backend/target/dist/openapi.yaml`
   (`mise run gen:spec` first). Android: the openapi-generator Gradle
   plugin (`kotlin` with OkHttp and kotlinx.serialization) into `:core`'s
   build directory. Neither is committed, as the web's.

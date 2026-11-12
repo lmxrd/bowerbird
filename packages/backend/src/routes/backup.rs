@@ -220,24 +220,7 @@ async fn update_settings(
 ) -> Result<Json<BackupSettings>, HttpError> {
     let _saving = state.backup.lock_saves().await;
     let (stored, settings) = merge(&state, backup::stored(&state.db).await?, body)?;
-    sqlx::query(
-        "UPDATE backup_settings SET repository = ?1, s3_endpoint = ?2, s3_region = ?3,
-           s3_access_key = ?4, s3_secret_key = ?5, password = ?6, schedule = ?7,
-           keep_daily = ?8, keep_weekly = ?9, keep_monthly = ?10
-         WHERE id = 1",
-    )
-    .bind(&stored.repository)
-    .bind(&stored.s3_endpoint)
-    .bind(&stored.s3_region)
-    .bind(&stored.s3_access_key)
-    .bind(&stored.s3_secret_key)
-    .bind(&stored.password)
-    .bind(&stored.schedule)
-    .bind(stored.keep_daily)
-    .bind(stored.keep_weekly)
-    .bind(stored.keep_monthly)
-    .execute(state.db.writer())
-    .await?;
+    crate::server_settings::save(state.db.writer(), "backup", &stored).await?;
     state.backup.replace(settings);
     Ok(Json(view(&state).await?))
 }

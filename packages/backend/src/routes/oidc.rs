@@ -537,19 +537,7 @@ async fn save(state: AppState, body: UpdateOidcSettings) -> Result<(), HttpError
         .check(&settings)
         .await
         .map_err(HttpError::bad_request)?;
-    sqlx::query(
-        "UPDATE oidc_settings SET issuer = ?1, client_id = ?2, client_secret = ?3, scopes = ?4,
-           label = ?5, redirect_url = ?6
-         WHERE id = 1",
-    )
-    .bind(&stored.issuer)
-    .bind(&stored.client_id)
-    .bind(&stored.client_secret)
-    .bind(&stored.scopes)
-    .bind(&stored.label)
-    .bind(&stored.redirect_url)
-    .execute(state.db.writer())
-    .await?;
+    crate::server_settings::save(state.db.writer(), "oidc", &stored).await?;
     state.oidc.replace(settings);
     Ok(())
 }

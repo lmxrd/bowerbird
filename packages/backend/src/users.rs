@@ -2,7 +2,7 @@
 //! open sign-up, single sign-on making accounts) and what a superadmin does to
 //! a user (the routes are `routes/users.rs`).
 //!
-//! The two switches are the `signup_settings` row with `SIGNUP_OPEN` and
+//! The two switches are the `signup` document of `server_settings` with `SIGNUP_OPEN` and
 //! `OIDC_CREATE_USERS` on top (a variable locks its switch), read when they
 //! are needed: they are two integers, not worth keeping in memory.
 //! With `OIDC_ONLY`, passwords are off for everyone: an invite is then
@@ -12,7 +12,7 @@
 use crate::auth::{iso, now_iso};
 use crate::db::Db;
 use crate::util::{random_hex, sha256_hex};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
 use std::time::{Duration, SystemTime};
 use utoipa::ToSchema;
@@ -61,7 +61,9 @@ impl Env {
 }
 
 /// How people may join besides an invite.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, ToSchema, sqlx::FromRow)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema, sqlx::FromRow,
+)]
 pub struct Joining {
     /// "Create an account" on the login page.
     pub open_signup: bool,
@@ -72,9 +74,7 @@ pub struct Joining {
 
 /// The stored switches, without the variables.
 pub async fn stored(db: &Db) -> sqlx::Result<Joining> {
-    sqlx::query_as("SELECT open_signup, oidc_create_users FROM signup_settings WHERE id = 1")
-        .fetch_one(db.reader())
-        .await
+    crate::server_settings::load(db.reader(), "signup").await
 }
 
 /// The switches in effect.

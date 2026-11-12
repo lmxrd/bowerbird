@@ -18,7 +18,8 @@
 //! **primary team** (the first they joined, or the one they chose).
 //!
 //! The settings no level has (backups, single sign-on, sign-up, AI
-//! concurrency) stay the superadmin's own, in their tables.
+//! concurrency) stay the superadmin's own, as JSON documents in
+//! `server_settings` (src/server_settings.rs).
 
 use crate::db::Db;
 use crate::error::HttpError;

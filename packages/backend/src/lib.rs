@@ -27,6 +27,7 @@ pub mod recovery;
 pub mod retention;
 pub mod routes;
 pub mod search;
+pub mod server_settings;
 pub mod session;
 pub mod settings;
 pub mod state;

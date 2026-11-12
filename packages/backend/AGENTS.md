@@ -29,8 +29,9 @@ repository root (`mise run check:backend`, `test:backend`, `dev:backend`).
 **Single sign-on** (`oidc.rs`, `routes/oidc.rs`): OpenID Connect through
 the `openidconnect` crate, without its default features (it would bring a
 second reqwest); our reqwest is handed to it (`Http` in `oidc.rs`, redirects
-off). The settings are the `oidc_settings` row with the `OIDC_*`
-environment variables on top (a variable locks its field); they live in
+off). The settings are the `oidc` document of the `server_settings` table
+with the `OIDC_*` environment variables on top (a variable locks its
+field); they live in
 memory in `state.oidc` and are replaced when a superadmin saves, after the
 provider answered. A login in progress (state, nonce, PKCE verifier,
 callback URL) is not kept on the server: it is the `organizer_oidc` cookie

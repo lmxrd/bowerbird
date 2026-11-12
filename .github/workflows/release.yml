@@ -96,7 +96,7 @@ jobs:
           # The OpenAPI spec (written by the build, identical on both
           # runners), attached once.
           if [ "${{ matrix.arch }}" = amd64 ]; then
-            cp packages/backend/target/specs/openapi.json release/
+            cp packages/backend/dist/openapi.json release/
           fi
           (cd release && sha256sum -- * > "SHA256SUMS-${{ matrix.arch }}")
           gh release upload "$TAG" release/* --clobber

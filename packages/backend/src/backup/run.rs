@@ -7,7 +7,7 @@
 //! each user's files folder was, so that a user's file is found in a
 //! snapshot even after their folder moved, and where the database copy is.
 
-use super::Settings;
+use super::{BackupStatus, Settings};
 use crate::state::AppState;
 use anyhow::Context;
 use rustic_backend::BackendOptions;
@@ -175,41 +175,48 @@ pub async fn backup(state: &AppState) -> anyhow::Result<()> {
     let settings = state.backup.settings();
     anyhow::ensure!(settings.enabled(), "Backups are not set up");
     let started = crate::auth::iso(std::time::SystemTime::now());
-    sqlx::query("UPDATE backup_status SET last_started = ?1 WHERE id = 1")
-        .bind(&started)
-        .execute(state.db.writer())
-        .await?;
+    update_status(state, |status| status.last_started = Some(started)).await?;
     let result = run_backup(state, settings).await;
     let finished = crate::auth::iso(std::time::SystemTime::now());
     match &result {
         Ok(done) => {
-            sqlx::query(
-                "UPDATE backup_status SET last_finished = ?1, last_error = NULL,
-                   last_snapshot = ?2, last_added = ?3, last_total = ?4, snapshots = ?5,
-                   last_check = coalesce(?6, last_check)
-                 WHERE id = 1",
-            )
-            .bind(&finished)
-            .bind(&done.snapshot)
-            .bind(done.added as i64)
-            .bind(done.total as i64)
-            .bind(done.snapshots as i64)
-            .bind(done.checked.then_some(&finished))
-            .execute(state.db.writer())
+            update_status(state, |status| {
+                status.last_finished = Some(finished.clone());
+                status.last_error = None;
+                status.last_snapshot = Some(done.snapshot.clone());
+                status.last_added = Some(done.added as i64);
+                status.last_total = Some(done.total as i64);
+                status.snapshots = Some(done.snapshots as i64);
+                if done.checked {
+                    status.last_check = Some(finished.clone());
+                }
+            })
             .await?;
         }
         Err(e) => {
             tracing::warn!("the backup failed: {e:#}");
-            sqlx::query(
-                "UPDATE backup_status SET last_finished = ?1, last_error = ?2 WHERE id = 1",
-            )
-            .bind(&finished)
-            .bind(format!("{e:#}"))
-            .execute(state.db.writer())
+            let error = format!("{e:#}");
+            update_status(state, |status| {
+                status.last_finished = Some(finished.clone());
+                status.last_error = Some(error);
+            })
             .await?;
         }
     }
     result.map(|_| ())
+}
+
+/// Change the stored backup status, in one transaction.
+async fn update_status(
+    state: &AppState,
+    change: impl FnOnce(&mut BackupStatus),
+) -> anyhow::Result<()> {
+    let mut tx = state.db.writer().begin().await?;
+    let mut status: BackupStatus = crate::server_settings::load(&mut *tx, "backup_status").await?;
+    change(&mut status);
+    crate::server_settings::save(&mut *tx, "backup_status", &status).await?;
+    tx.commit().await?;
+    Ok(())
 }
 
 /// What a backup takes, and its manifest: the database's copy in
@@ -300,10 +307,9 @@ async fn run_backup(state: &AppState, settings: Settings) -> anyhow::Result<Done
         .context("cannot copy the database")?;
 
     let (sources, manifest) = sources(state, &staging, copy.clone()).await?;
-    let last_check: Option<String> =
-        sqlx::query_scalar("SELECT last_check FROM backup_status WHERE id = 1")
-            .fetch_one(state.db.reader())
-            .await?;
+    let status: BackupStatus =
+        crate::server_settings::load(state.db.reader(), "backup_status").await?;
+    let last_check = status.last_check;
     let check_due = last_check
         .and_then(|t| t.parse::<jiff::Timestamp>().ok())
         .is_none_or(|t| t + CHECK_EVERY < jiff::Timestamp::now());

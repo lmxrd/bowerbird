@@ -705,10 +705,12 @@ async fn set_federation(
         ));
     }
     let mut tx = state.db.writer().begin().await?;
-    sqlx::query("UPDATE federation_settings SET mode = ?1 WHERE id = 1")
-        .bind(body.mode)
-        .execute(&mut *tx)
-        .await?;
+    crate::server_settings::save(
+        &mut *tx,
+        "federation",
+        &crate::federation::Settings { mode: body.mode },
+    )
+    .await?;
     sqlx::query("DELETE FROM federation_servers")
         .execute(&mut *tx)
         .await?;

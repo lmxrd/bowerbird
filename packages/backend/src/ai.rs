@@ -105,17 +105,6 @@ impl Work {
             Work::Audio => "audio",
         }
     }
-
-    /// Its column in `ai_settings`.
-    fn column(self) -> &'static str {
-        match self {
-            Work::Proposals => "proposals_model",
-            Work::Embeddings => "embeddings_model_id",
-            Work::Images => "images_model",
-            Work::Scans => "scans_model",
-            Work::Audio => "audio_model",
-        }
-    }
 }
 
 /// A model, registered or from the environment. An empty string is a
@@ -220,7 +209,7 @@ pub fn providers() -> Vec<&'static str> {
 
 /// The superadmin's choices, as stored: model ids, `None` for the default
 /// (proposals) or off (the rest).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Choices {
     pub default_model: Option<String>,
     pub proposals: Option<String>,
@@ -617,56 +606,13 @@ pub async fn stored_models(db: &Db) -> Result<Vec<Model>, sqlx::Error> {
 
 /// The superadmin's stored choices.
 pub async fn stored_choices(db: &Db) -> Result<Choices, sqlx::Error> {
-    #[allow(clippy::type_complexity)]
-    let row: (
-        Option<Uuid>,
-        Option<Uuid>,
-        Option<Uuid>,
-        Option<Uuid>,
-        Option<Uuid>,
-        Option<Uuid>,
-        i64,
-        i64,
-    ) = sqlx::query_as(
-        "SELECT default_model, proposals_model, embeddings_model_id, images_model, scans_model,
-           audio_model, concurrency, timeout_seconds
-         FROM ai_settings WHERE id = 1",
-    )
-    .fetch_one(db.reader())
-    .await?;
-    let id = |u: Option<Uuid>| u.map(|u| u.to_string());
-    Ok(Choices {
-        default_model: id(row.0),
-        proposals: id(row.1),
-        embeddings: id(row.2),
-        images: id(row.3),
-        scans: id(row.4),
-        audio: id(row.5),
-        concurrency: row.6,
-        timeout_seconds: row.7,
-    })
+    crate::server_settings::load(db.reader(), "ai").await
 }
 
 /// Store the superadmin's choices (ids of registered models; another id, such
 /// as the environment's, is stored as none).
 pub async fn store_choices(db: &Db, choices: &Choices) -> Result<(), sqlx::Error> {
-    let id = |s: Option<&String>| s.and_then(|s| Uuid::parse_str(s).ok());
-    let mut query = String::from(
-        "UPDATE ai_settings SET default_model = ?1, concurrency = ?2, timeout_seconds = ?3",
-    );
-    for (n, work) in Work::ALL.iter().enumerate() {
-        query.push_str(&format!(", {} = ?{}", work.column(), n + 4));
-    }
-    query.push_str(" WHERE id = 1");
-    let mut q = sqlx::query(sqlx::AssertSqlSafe(query))
-        .bind(id(choices.default_model.as_ref()))
-        .bind(choices.concurrency)
-        .bind(choices.timeout_seconds);
-    for work in Work::ALL {
-        q = q.bind(id(choices.get(work)));
-    }
-    q.execute(db.writer()).await?;
-    Ok(())
+    crate::server_settings::save(db.writer(), "ai", choices).await
 }
 
 /// Why a request to a model failed.

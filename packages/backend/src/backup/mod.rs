@@ -3,7 +3,7 @@
 //! into a rustic (restic-format) repository: deduplicated, compressed and
 //! encrypted, on a local path or S3.
 //!
-//! The settings are a superadmin's (`backup_settings`), with `BACKUP_*`
+//! The settings are a superadmin's (the `backup` document of `server_settings`), with `BACKUP_*`
 //! variables on top that lock their field, as the `AI_*` ones do. A
 //! scheduler queues a `backup` job when one is due; the job runs rustic
 //! (`run.rs`), which is synchronous, on a thread of its own.
@@ -14,7 +14,7 @@ pub mod run;
 use crate::db::Db;
 use crate::jobs::{BoxFuture, Handler, Job};
 use crate::state::AppState;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use utoipa::ToSchema;
@@ -23,7 +23,7 @@ use utoipa::ToSchema;
 pub const JOB: &str = "backup";
 
 /// The backup settings, as stored or as in effect.
-#[derive(Clone, Debug, Default, PartialEq, Eq, sqlx::FromRow)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Settings {
     /// A path, or `s3://bucket/path`. Empty: no backups.
     pub repository: String,
@@ -263,19 +263,13 @@ pub fn variable(field: &str) -> String {
     }
 }
 
-/// The stored row.
+/// The stored settings.
 pub async fn stored(db: &Db) -> Result<Settings, sqlx::Error> {
-    sqlx::query_as(
-        "SELECT repository, s3_endpoint, s3_region, s3_access_key, s3_secret_key, password,
-           schedule, keep_daily, keep_weekly, keep_monthly
-         FROM backup_settings WHERE id = 1",
-    )
-    .fetch_one(db.reader())
-    .await
+    crate::server_settings::load(db.reader(), "backup").await
 }
 
 /// How the last backups went.
-#[derive(Clone, Debug, Default, Serialize, ToSchema, sqlx::FromRow)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, ToSchema, sqlx::FromRow)]
 pub struct BackupStatus {
     #[schema(required = true)]
     pub last_started: Option<String>,
@@ -300,13 +294,7 @@ pub struct BackupStatus {
 }
 
 pub async fn status(db: &Db) -> Result<BackupStatus, sqlx::Error> {
-    sqlx::query_as(
-        "SELECT last_started, last_finished, last_error, last_snapshot, last_added, last_total,
-           snapshots, last_check
-         FROM backup_status WHERE id = 1",
-    )
-    .fetch_one(db.reader())
-    .await
+    crate::server_settings::load(db.reader(), "backup_status").await
 }
 
 /// The backup settings in effect.

@@ -665,15 +665,14 @@ async fn update_joining(
             )));
         }
     }
-    sqlx::query(
-        "UPDATE signup_settings SET open_signup = coalesce(?1, open_signup),
-           oidc_create_users = coalesce(?2, oidc_create_users)
-         WHERE id = 1",
-    )
-    .bind(body.open_signup)
-    .bind(body.oidc_create_users)
-    .execute(state.db.writer())
-    .await?;
+    let mut stored = users::stored(&state.db).await?;
+    if let Some(open_signup) = body.open_signup {
+        stored.open_signup = open_signup;
+    }
+    if let Some(oidc_create_users) = body.oidc_create_users {
+        stored.oidc_create_users = oidc_create_users;
+    }
+    crate::server_settings::save(state.db.writer(), "signup", &stored).await?;
     Ok(Json(joining_view(&state).await?))
 }
 
