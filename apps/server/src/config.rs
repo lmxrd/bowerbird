@@ -38,6 +38,31 @@ pub fn data_dir() -> PathBuf {
     var("DATA_DIR").unwrap_or_else(|| "data".into()).into()
 }
 
+/// An `s3://endpoint/bucket/prefix` URL (`s3+http://` for a plain-http
+/// endpoint, e.g. a local MinIO): the endpoint, bucket and prefix.
+pub fn parse_s3_url(url: &str) -> Result<(String, String, String), String> {
+    let (scheme, rest) = url.split_once("://").ok_or("no scheme")?;
+    let endpoint_scheme = match scheme {
+        "s3" => "https",
+        "s3+http" => "http",
+        other => return Err(format!("not an s3 URL: {other}://")),
+    };
+    let (host, path) = rest
+        .split_once('/')
+        .ok_or_else(|| "no bucket: s3://endpoint/bucket/prefix".to_string())?;
+    if host.is_empty() {
+        return Err("no endpoint host: s3://endpoint/bucket/prefix".into());
+    }
+    let (bucket, prefix) = match path.split_once('/') {
+        Some((bucket, prefix)) => (bucket.to_string(), prefix.trim_end_matches('/').to_string()),
+        None => (path.to_string(), String::new()),
+    };
+    if bucket.is_empty() {
+        return Err("no bucket: s3://endpoint/bucket/prefix".into());
+    }
+    Ok((format!("{endpoint_scheme}://{host}"), bucket, prefix))
+}
+
 /// `STORAGE_URL`: where the file content is — a local path (by default a
 /// `files` folder in the data dir), `file://…`, or an `s3://endpoint/bucket/prefix`
 /// URL, whose host is the endpoint and whose credentials come from
@@ -57,27 +82,14 @@ pub enum StorageUrl {
 pub fn storage_url(data_dir: &Path) -> Result<StorageUrl, String> {
     match var("STORAGE_URL") {
         None => Ok(StorageUrl::Local(data_dir.join("files"))),
-        Some(url) if url.starts_with("s3://") => {
-            let rest = url.trim_start_matches("s3://");
-            let (host, path) = match rest.split_once('/') {
-                Some((host, path)) => (host, path),
-                None => return Err("STORAGE_URL's s3:// URL has no bucket".into()),
-            };
-            if host.is_empty() {
-                return Err("STORAGE_URL's s3:// URL has no endpoint host".into());
-            }
-            let (bucket, prefix) = match path.split_once('/') {
-                Some((bucket, prefix)) => (bucket.to_string(), prefix.trim_end_matches('/')),
-                None => (path.to_string(), ""),
-            };
-            if bucket.is_empty() {
-                return Err("STORAGE_URL's s3:// URL has no bucket".into());
-            }
+        Some(url) if url.starts_with("s3://") || url.starts_with("s3+http://") => {
+            let (endpoint, bucket, prefix) =
+                parse_s3_url(&url).map_err(|e| format!("STORAGE_URL: {e}"))?;
             Ok(StorageUrl::S3 {
-                endpoint: format!("https://{host}"),
+                endpoint,
                 region: var("STORAGE_REGION").unwrap_or_else(|| "us-east-1".into()),
                 bucket,
-                prefix: prefix.to_string(),
+                prefix,
             })
         }
         Some(url) if url.starts_with("file://") => Ok(StorageUrl::Local(PathBuf::from(

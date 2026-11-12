@@ -1036,7 +1036,7 @@ CREATE TABLE server_settings (
 INSERT INTO server_settings (key, value) VALUES
   ('oidc', '{"issuer":"","client_id":"","client_secret":"","scopes":"","label":"","redirect_url":""}'),
   ('ai', '{"default_model":null,"proposals":null,"embeddings":null,"images":null,"scans":null,"audio":null,"concurrency":1,"timeout_seconds":120}'),
-  ('backup', '{"repository":"","s3_endpoint":"","s3_region":"","s3_access_key":"","s3_secret_key":"","password":"","schedule":"daily 03:00","keep_daily":7,"keep_weekly":4,"keep_monthly":12}'),
+  ('backup', '{"url":"","region":"","access_key":"","secret_key":"","password":"","schedule":"daily 03:00","keep_daily":7,"keep_weekly":4,"keep_monthly":12}'),
   ('backup_status', '{"last_started":null,"last_finished":null,"last_error":null,"last_snapshot":null,"last_added":null,"last_total":null,"snapshots":null,"last_check":null}'),
   ('signup', '{"open_signup":false,"oidc_create_users":false}'),
   ('federation', '{"mode":"off"}');

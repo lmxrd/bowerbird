@@ -25,12 +25,12 @@ pub const JOB: &str = "backup";
 /// The backup settings, as stored or as in effect.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Settings {
-    /// A path, or `s3://bucket/path`. Empty: no backups.
-    pub repository: String,
-    pub s3_endpoint: String,
-    pub s3_region: String,
-    pub s3_access_key: String,
-    pub s3_secret_key: String,
+    /// A path, or `s3://endpoint/bucket/path` (the URL's host is the
+    /// endpoint; `s3+http://` for plain http). Empty: no backups.
+    pub url: String,
+    pub region: String,
+    pub access_key: String,
+    pub secret_key: String,
     pub password: String,
     pub schedule: String,
     pub keep_daily: i64,
@@ -41,13 +41,13 @@ pub struct Settings {
 impl Settings {
     /// Backups are set up: a repository and its password.
     pub fn enabled(&self) -> bool {
-        !self.repository.is_empty() && !self.password.is_empty()
+        !self.url.is_empty() && !self.password.is_empty()
     }
 
-    /// The repository is on S3.
-    pub fn s3(&self) -> Option<(&str, &str)> {
-        let rest = self.repository.strip_prefix("s3://")?;
-        Some(rest.split_once('/').unwrap_or((rest, "")))
+    /// The repository is on S3: its endpoint, bucket and prefix.
+    pub fn s3(&self) -> Option<(String, String, String)> {
+        let (endpoint, bucket, prefix) = crate::config::parse_s3_url(&self.url).ok()?;
+        Some((endpoint, bucket, prefix))
     }
 
     pub fn validate(&self) -> Result<(), String> {
@@ -64,24 +64,25 @@ impl Settings {
         if self.keep_daily + self.keep_weekly + self.keep_monthly == 0 {
             return Err("Keep at least one daily, weekly or monthly backup".into());
         }
-        if self.repository.is_empty() {
+        if self.url.is_empty() {
             return Ok(());
         }
         match self.s3() {
-            Some(("", _)) => return Err("An S3 repository needs a bucket: s3://bucket/path".into()),
             Some(_) => {
-                if self.s3_access_key.is_empty() || self.s3_secret_key.is_empty() {
-                    return Err("An S3 repository needs an access key and a secret key".into());
-                }
-                if !self.s3_endpoint.is_empty()
-                    && !self.s3_endpoint.starts_with("https://")
-                    && !self.s3_endpoint.starts_with("http://")
-                {
-                    return Err("The S3 endpoint must be a URL".into());
+                if self.access_key.is_empty() || self.secret_key.is_empty() {
+                    return Err(
+                        "An S3 backup needs BACKUP_ACCESS_KEY / BACKUP_SECRET_KEY or their settings fields"
+                            .into(),
+                    );
                 }
             }
-            None if !std::path::Path::new(&self.repository).is_absolute() => {
-                return Err("The repository must be an absolute path, or s3://bucket/path".into());
+            None if !self.url.starts_with("file://")
+                && !std::path::Path::new(self.url.trim_start_matches("file://")).is_absolute() =>
+            {
+                return Err(
+                    "The backup URL must be an absolute path, file://…, or s3://endpoint/bucket/path"
+                        .into(),
+                );
             }
             None => {}
         }
@@ -164,11 +165,10 @@ impl Schedule {
 /// The `BACKUP_*` variables.
 #[derive(Clone, Debug, Default)]
 pub struct Env {
-    pub repository: Option<String>,
-    pub s3_endpoint: Option<String>,
-    pub s3_region: Option<String>,
-    pub s3_access_key: Option<String>,
-    pub s3_secret_key: Option<String>,
+    pub url: Option<String>,
+    pub region: Option<String>,
+    pub access_key: Option<String>,
+    pub secret_key: Option<String>,
     pub password: Option<String>,
     pub schedule: Option<String>,
     /// `BACKUP_KEEP`: daily, weekly, monthly.
@@ -199,11 +199,10 @@ impl Env {
             }
         };
         let env = Env {
-            repository: var("BACKUP_REPOSITORY"),
-            s3_endpoint: var("BACKUP_S3_ENDPOINT"),
-            s3_region: var("BACKUP_S3_REGION"),
-            s3_access_key: var("BACKUP_S3_ACCESS_KEY"),
-            s3_secret_key: var("BACKUP_S3_SECRET_KEY"),
+            url: var("BACKUP_URL"),
+            region: var("BACKUP_REGION"),
+            access_key: var("BACKUP_ACCESS_KEY"),
+            secret_key: var("BACKUP_SECRET_KEY"),
             password: var("BACKUP_PASSWORD"),
             schedule: var("BACKUP_SCHEDULE"),
             keep,
@@ -221,11 +220,10 @@ impl Env {
             self.keep
                 .unwrap_or((stored.keep_daily, stored.keep_weekly, stored.keep_monthly));
         Settings {
-            repository: pick(&self.repository, &stored.repository),
-            s3_endpoint: pick(&self.s3_endpoint, &stored.s3_endpoint),
-            s3_region: pick(&self.s3_region, &stored.s3_region),
-            s3_access_key: pick(&self.s3_access_key, &stored.s3_access_key),
-            s3_secret_key: pick(&self.s3_secret_key, &stored.s3_secret_key),
+            url: pick(&self.url, &stored.url),
+            region: pick(&self.region, &stored.region),
+            access_key: pick(&self.access_key, &stored.access_key),
+            secret_key: pick(&self.secret_key, &stored.secret_key),
             password: pick(&self.password, &stored.password),
             schedule: pick(&self.schedule, &stored.schedule),
             keep_daily,
@@ -237,11 +235,10 @@ impl Env {
     /// The fields a variable sets.
     pub fn locked(&self) -> Vec<&'static str> {
         let mut out: Vec<&'static str> = [
-            ("repository", self.repository.is_some()),
-            ("s3_endpoint", self.s3_endpoint.is_some()),
-            ("s3_region", self.s3_region.is_some()),
-            ("s3_access_key", self.s3_access_key.is_some()),
-            ("s3_secret_key", self.s3_secret_key.is_some()),
+            ("url", self.url.is_some()),
+            ("region", self.region.is_some()),
+            ("access_key", self.access_key.is_some()),
+            ("secret_key", self.secret_key.is_some()),
             ("password", self.password.is_some()),
             ("schedule", self.schedule.is_some()),
         ]
@@ -462,7 +459,7 @@ mod tests {
     #[test]
     fn settings_are_checked() {
         let ok = Settings {
-            repository: "/mnt/backup".into(),
+            url: "/mnt/backup".into(),
             password: "secret".into(),
             schedule: "daily 03:00".into(),
             keep_daily: 7,
@@ -470,13 +467,20 @@ mod tests {
         };
         assert_eq!(ok.validate(), Ok(()));
         let s3 = Settings {
-            repository: "s3://bucket/organizer".into(),
+            url: "s3://s3.example.com/bucket/organizer".into(),
             ..ok.clone()
         };
-        assert!(s3.validate().unwrap_err().contains("access key"));
-        assert_eq!(s3.s3(), Some(("bucket", "organizer")));
+        assert!(s3.validate().unwrap_err().contains("BACKUP_ACCESS_KEY"));
+        assert_eq!(
+            s3.s3(),
+            Some((
+                "https://s3.example.com".into(),
+                "bucket".into(),
+                "organizer".into()
+            ))
+        );
         let relative = Settings {
-            repository: "backup".into(),
+            url: "backup".into(),
             ..ok.clone()
         };
         assert!(relative.validate().is_err());
@@ -502,6 +506,6 @@ mod tests {
             ["password", "keep_daily", "keep_weekly", "keep_monthly"]
         );
         assert_eq!(variable("keep_weekly"), "BACKUP_KEEP");
-        assert_eq!(variable("s3_secret_key"), "BACKUP_S3_SECRET_KEY");
+        assert_eq!(variable("secret_key"), "BACKUP_SECRET_KEY");
     }
 }

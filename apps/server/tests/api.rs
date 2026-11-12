@@ -6402,7 +6402,7 @@ async fn backups_are_made_browsed_and_restored_from() {
         )
     };
     assert_eq!(
-        put(json!({ "repository": "relative/path", "password": "pw" }))
+        put(json!({ "url": "relative/path", "password": "pw" }))
             .await
             .status_code(),
         400
@@ -6416,14 +6416,13 @@ async fn backups_are_made_browsed_and_restored_from() {
         Method::POST,
         "/api/superadmin/backup/test",
         Some(&admin),
-        Some(json!({ "repository": repository.to_str().unwrap(), "password": "correct horse" })),
+        Some(json!({ "url": repository.to_str().unwrap(), "password": "correct horse" })),
     )
     .await;
     assert_eq!(test.status_code(), 200, "{}", test.text());
     assert_eq!(json(test).await["exists"], json!(false));
     let view = json(
-        put(json!({ "repository": repository.to_str().unwrap(), "password": "correct horse" }))
-            .await,
+        put(json!({ "url": repository.to_str().unwrap(), "password": "correct horse" })).await,
     )
     .await;
     assert_eq!(view["enabled"], json!(true));

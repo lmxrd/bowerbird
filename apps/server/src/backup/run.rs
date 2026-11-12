@@ -77,30 +77,25 @@ async fn off_thread<T: Send + 'static>(
 fn repository(settings: &Settings, cache: &Path) -> anyhow::Result<Repository<()>> {
     let mut backend = BackendOptions::default();
     match settings.s3() {
-        Some((bucket, root)) => {
+        Some((endpoint, bucket, prefix)) => {
             backend = backend.repository("opendal:s3");
             let mut options = BTreeMap::new();
-            options.insert("bucket".to_string(), bucket.to_string());
-            options.insert("root".to_string(), format!("/{root}"));
-            if !settings.s3_endpoint.is_empty() {
-                options.insert("endpoint".to_string(), settings.s3_endpoint.clone());
-            }
+            options.insert("bucket".to_string(), bucket);
+            options.insert("root".to_string(), format!("/{prefix}"));
+            options.insert("endpoint".to_string(), endpoint);
             options.insert(
                 "region".to_string(),
-                if settings.s3_region.is_empty() {
+                if settings.region.is_empty() {
                     "us-east-1".to_string()
                 } else {
-                    settings.s3_region.clone()
+                    settings.region.clone()
                 },
             );
-            options.insert("access_key_id".to_string(), settings.s3_access_key.clone());
-            options.insert(
-                "secret_access_key".to_string(),
-                settings.s3_secret_key.clone(),
-            );
+            options.insert("access_key_id".to_string(), settings.access_key.clone());
+            options.insert("secret_access_key".to_string(), settings.secret_key.clone());
             backend = backend.options(options);
         }
-        None => backend = backend.repository(settings.repository.clone()),
+        None => backend = backend.repository(settings.url.clone()),
     }
     let backends = backend.to_backends()?;
     let options = RepositoryOptions::default().cache_dir(cache.to_path_buf());
