@@ -107,7 +107,7 @@ pub const ITEM_COLUMNS: &str = "id, kind, name, url, note, size, mime_type, read
     created_at, updated_at";
 
 /// Where an item's file is staged: the drop box's folder under the local
-/// base (`FILES_DIR` when it is a path, else the data dir), never the user's
+/// base (`STORAGE_URL` when it is a path, else the data dir), never the user's
 /// tree.
 pub fn staging_dir(state: &AppState, user_id: Uuid, item_id: Uuid) -> PathBuf {
     state.files.inbox_dir(user_id).join(item_id.to_string())

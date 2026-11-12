@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 struct Server {
     state: AppState,
-    /// The user's tree on the server's disk (the default root under FILES_DIR).
+    /// The user's tree on the server's disk (the default root under STORAGE_URL).
     files: PathBuf,
     /// Through the proxy, which `offline` cuts.
     url: String,
@@ -42,7 +42,7 @@ async fn server() -> Server {
         files: organizer::files::Files::new(
             db.clone(),
             dir.join("data"),
-            organizer::config::FilesDir::Local(base.clone()),
+            organizer::config::StorageUrl::Local(base.clone()),
         ),
         db: db.clone(),
         trust_proxy: false,

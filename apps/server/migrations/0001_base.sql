@@ -32,7 +32,7 @@ CREATE TABLE users (
   totp_pending TEXT,
   totp_last_step INTEGER NOT NULL DEFAULT 0,
   -- The user's tree (docs/M1_DESIGN.md §4): NULL is the default, under
-  -- FILES_DIR (a path or an s3:// bucket, whose drives are backend drives).
+  -- STORAGE_URL (a path or an s3:// bucket, whose drives are backend drives).
   files_root TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   feed_epoch INTEGER NOT NULL DEFAULT 0,
@@ -388,7 +388,7 @@ CREATE INDEX drives_backend ON drives (backend_id);
 
 CREATE TRIGGER users_my_drive AFTER INSERT ON users
 BEGIN
-  -- An s3:// FILES_DIR: the bucket is the default backend (`files_backend`
+  -- An s3:// STORAGE_URL: the bucket is the default backend (`files_backend`
   -- in the server settings), and the new drive is made in it.
   INSERT INTO drives (id, kind, user_id, created_by, backend_id)
   VALUES (NEW.id, 'my', NEW.id, NEW.id,

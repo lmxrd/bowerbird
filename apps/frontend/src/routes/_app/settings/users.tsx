@@ -349,7 +349,7 @@ function FolderDialog({ user, onClose }: { user: UserEntry; onClose: () => void 
       <SettingField
         id="files-root"
         label="Path on the server"
-        description="Empty for their own folder under FILES_DIR. Never another user's folder."
+        description="Empty for their own folder under STORAGE_URL. Never another user's folder."
       >
         <Input
           id="files-root"

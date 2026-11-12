@@ -1,5 +1,5 @@
 //! Where the user's files are: the files root (docs/M1_DESIGN.md §4). The
-//! default is under `FILES_DIR`; set at setup, changed here by a superadmin.
+//! default is under `STORAGE_URL`; set at setup, changed here by a superadmin.
 
 use crate::error::{ErrorBody, HttpError};
 use crate::extract::ApiJson;
@@ -22,13 +22,13 @@ pub fn superadmin_router() -> OpenApiRouter<AppState> {
 pub struct Storage {
     /// The absolute path of the files folder on the server.
     pub files_root: String,
-    /// Whether it is the default, a folder under `FILES_DIR`.
+    /// Whether it is the default, a folder under `STORAGE_URL`.
     pub default: bool,
     /// Whether the folder is there: false for a share that is not mounted.
     pub available: bool,
 }
 
-/// The files folder to use; null for the default under `FILES_DIR`.
+/// The files folder to use; null for the default under `STORAGE_URL`.
 #[derive(Deserialize, ToSchema)]
 pub struct SetStorage {
     /// An absolute path on the server, of an existing folder Organizer can
@@ -77,11 +77,11 @@ async fn get_storage(
     tag = "Superadmin",
     operation_id = "setStorage",
     summary = "Set where the files are",
-    description = "Another folder, such as a share that already holds files: Organizer indexes it where it is and copies nothing. The tree is indexed from scratch in the background: the ids and the change feed of the old one are dropped, and the apps list everything again. Refused while `FILES_DIR` sets the folder.",
+    description = "Another folder, such as a share that already holds files: Organizer indexes it where it is and copies nothing. The tree is indexed from scratch in the background: the ids and the change feed of the old one are dropped, and the apps list everything again. Refused while `STORAGE_URL` sets the folder.",
     request_body(content = SetStorage, content_type = "application/json"),
     responses(
         (status = 200, description = "Set; indexing has started", body = Storage),
-        (status = 400, description = "Not a folder Organizer can use, or set by FILES_DIR", body = ErrorBody),
+        (status = 400, description = "Not a folder Organizer can use, or set by STORAGE_URL", body = ErrorBody),
         (status = 401, description = "Not signed in", body = ErrorBody),
         (status = 403, description = "Superadmin only, with a session (never a token) whose second factor was confirmed within 15 minutes: else `code` is `step_up_required` (confirm it, `/auth/step-up/…`) or `second_factor_required` (add one first)", body = ErrorBody),
         (status = 415, description = "The body must be JSON (Content-Type: application/json)", body = ErrorBody),

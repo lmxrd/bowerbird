@@ -69,7 +69,7 @@ function Setup() {
             />
             <FieldDescription>
               A folder on the server that may already hold files. Leave it empty for the default one
-              under FILES_DIR.
+              under STORAGE_URL.
             </FieldDescription>
           </Field>
           {setup.isError && <FieldError>{errorMessage(setup.error)}</FieldError>}

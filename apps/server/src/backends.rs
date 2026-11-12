@@ -406,22 +406,26 @@ impl Backends {
         .bind(id)
         .bind(user)
         .bind(format!("Stand-in {id}"))
-        .bind(&endpoint)
+        .bind(endpoint)
         .bind(secret)
         .execute(self.db.writer())
         .await?;
         Ok(id)
     }
 
-    /// The global backend of an `s3://` `FILES_DIR` (the `FILES_S3_*`
-    /// variables), made or updated at start; its id, so that new drives are
-    /// made in the bucket.
-    pub async fn ensure_files_backend(&self, bucket: &str, prefix: &str) -> Result<Uuid, String> {
-        let endpoint = crate::config::files_s3_endpoint()?;
-        let region = crate::config::files_s3_region();
-        let access_key = crate::config::files_s3_access_key()?;
+    /// The global backend of an `s3://` `STORAGE_URL` (credentials from
+    /// `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY`), made or updated at start;
+    /// its id, so that new drives are made in the bucket.
+    pub async fn ensure_files_backend(
+        &self,
+        endpoint: &str,
+        region: &str,
+        bucket: &str,
+        prefix: &str,
+    ) -> Result<Uuid, String> {
+        let access_key = crate::config::storage_access_key()?;
         let secret = self
-            .seal(&crate::config::files_s3_secret_key()?)
+            .seal(&crate::config::storage_secret_key()?)
             .map_err(|e| e.to_string())?;
         let existing: Option<Uuid> =
             sqlx::query_scalar("SELECT id FROM backends WHERE owner_id IS NULL AND name = 'files'")
@@ -435,8 +439,8 @@ impl Backends {
                        access_key = ?6, secret = ?7, list_every = 3600 WHERE id = ?1",
                 )
                 .bind(id)
-                .bind(&endpoint)
-                .bind(&region)
+                .bind(endpoint)
+                .bind(region)
                 .bind(bucket)
                 .bind(prefix)
                 .bind(&access_key)
@@ -454,8 +458,8 @@ impl Backends {
                      VALUES (?1, NULL, 's3', 'files', ?2, ?3, ?4, ?5, ?6, ?7, 'everyone', 3600)",
                 )
                 .bind(id)
-                .bind(&endpoint)
-                .bind(&region)
+                .bind(endpoint)
+                .bind(region)
                 .bind(bucket)
                 .bind(prefix)
                 .bind(&access_key)

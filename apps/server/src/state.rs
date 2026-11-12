@@ -71,7 +71,7 @@ impl AppState {
             files: Files::new(
                 db.clone(),
                 data_dir.clone(),
-                crate::config::files_dir(&data_dir).expect("a valid FILES_DIR in the tests"),
+                crate::config::storage_url(&data_dir).expect("a valid STORAGE_URL in the tests"),
             ),
             db,
             public_url: None,

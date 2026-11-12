@@ -289,7 +289,7 @@ mod tests {
         let files = crate::files::Files::new(
             db,
             std::env::temp_dir(),
-            crate::config::FilesDir::Local(std::env::temp_dir()),
+            crate::config::StorageUrl::Local(std::env::temp_dir()),
         );
         let (me, someone) = (Uuid::now_v7(), Uuid::now_v7());
         let mut events = Events {
@@ -311,7 +311,7 @@ mod tests {
         let files = crate::files::Files::new(
             db,
             std::env::temp_dir(),
-            crate::config::FilesDir::Local(std::env::temp_dir()),
+            crate::config::StorageUrl::Local(std::env::temp_dir()),
         );
         let me = Uuid::now_v7();
         let mut events = Events {

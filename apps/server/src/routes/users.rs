@@ -307,7 +307,7 @@ fn last_superadmin() -> HttpError {
     tag = "Superadmin",
     operation_id = "removeUser",
     summary = "Remove a user",
-    description = "The account, its sessions and keys, and Organizer's own data for it (the drop box, the trash, the versions). Its files folder is deleted only when it is the default one in the data dir; an existing folder (and `FILES_DIR`) is never deleted. The last superadmin who is not disabled cannot be removed (409).",
+    description = "The account, its sessions and keys, and Organizer's own data for it (the drop box, the trash, the versions). Its files folder is deleted only when it is the default one in the data dir; an existing folder (and `STORAGE_URL`) is never deleted. The last superadmin who is not disabled cannot be removed (409).",
     params(("id" = Uuid, Path, description = "The user")),
     responses(
         (status = 204, description = "Removed"),

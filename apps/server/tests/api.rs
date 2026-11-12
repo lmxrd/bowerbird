@@ -48,8 +48,8 @@ struct Options {
     limits: organizer::limits::Limits,
     /// `SWAGGER_UI`.
     swagger_ui: bool,
-    /// `FILES_DIR`.
-    files_dir: Option<std::path::PathBuf>,
+    /// `STORAGE_URL`.
+    storage_url: Option<std::path::PathBuf>,
     /// The AI_* variables.
     ai: organizer::ai::Env,
     /// `LINKS_ALLOW_PRIVATE`: the tests' pages are on this machine.
@@ -69,7 +69,7 @@ impl Default for Options {
             public_url: None,
             limits: organizer::limits::Limits::with_bursts(1_000, 1_000, 1_000),
             swagger_ui: false,
-            files_dir: None,
+            storage_url: None,
             ai: organizer::ai::Env::default(),
             links_allow_private: false,
             backup: organizer::backup::Env::default(),
@@ -95,10 +95,11 @@ async fn spawn(options: Options) -> TestApp {
             db.clone(),
             data_dir.clone(),
             options
-                .files_dir
-                .map(organizer::config::FilesDir::Local)
+                .storage_url
+                .map(organizer::config::StorageUrl::Local)
                 .unwrap_or_else(|| {
-                    organizer::config::files_dir(&data_dir).expect("a valid FILES_DIR in the tests")
+                    organizer::config::storage_url(&data_dir)
+                        .expect("a valid STORAGE_URL in the tests")
                 }),
         ),
         db: db.clone(),
@@ -2524,7 +2525,7 @@ impl Drop for TempDir {
 }
 
 /// The files folder: the default, one chosen at setup (a share that already
-/// holds files), changed by the admin. FILES_DIR is only the base the
+/// holds files), changed by the admin. STORAGE_URL is only the base the
 /// default is under; it locks nothing.
 #[tokio::test]
 async fn the_files_folder_is_chosen_at_setup_and_changed_by_the_admin() {
@@ -2594,11 +2595,11 @@ async fn the_files_folder_is_chosen_at_setup_and_changed_by_the_admin() {
         401
     );
 
-    // FILES_DIR is the base of the default folder, and locks nothing: the
+    // STORAGE_URL is the base of the default folder, and locks nothing: the
     // admin can still choose another one.
     let base = TempDir::new();
     let app = spawn(Options {
-        files_dir: Some(base.0.clone()),
+        storage_url: Some(base.0.clone()),
         ..Options::default()
     })
     .await;
@@ -7683,14 +7684,14 @@ async fn removing_a_user_deletes_the_default_folder_but_keeps_an_existing_one() 
     assert_eq!(response.status_code(), 404);
 }
 
-/// `FILES_DIR` is the base of the file content: every user's default folder
+/// `STORAGE_URL` is the base of the file content: every user's default folder
 /// is under it (the first admin's included), and the admin may still choose
 /// another folder for anyone.
 #[tokio::test]
-async fn files_dir_is_the_base_of_every_users_files() {
+async fn storage_url_is_the_base_of_every_users_files() {
     let base = TempDir::new();
     let app = spawn(Options {
-        files_dir: Some(base.0.clone()),
+        storage_url: Some(base.0.clone()),
         ..Options::default()
     })
     .await;

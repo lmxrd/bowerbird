@@ -409,7 +409,7 @@ pub struct Setup {
     pub password: String,
     /// The folder of the files, an absolute path on the server: an existing
     /// folder Organizer can write to, such as a share that already holds
-    /// files. Left out: the default, under `FILES_DIR`.
+    /// files. Left out: the default, under `STORAGE_URL`.
     #[serde(default)]
     pub files_root: Option<String>,
 }

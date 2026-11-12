@@ -82,7 +82,7 @@ async fn server() -> Server {
         files: organizer::files::Files::new(
             db.clone(),
             data.clone(),
-            organizer::config::FilesDir::Local(data.clone().join("files")),
+            organizer::config::StorageUrl::Local(data.clone().join("files")),
         ),
         db: db.clone(),
         trust_proxy: false,

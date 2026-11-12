@@ -135,7 +135,7 @@ The server is one crate (`organizer`: the binary, its library, and the `openapi`
 
 ### 3.3 Configuration
 
-- **Environment variables**, unprefixed like Potoo's and Woodmouse's (`PORT`, `PUBLIC_URL`, `DATABASE_URL`, `DATA_DIR`, `TRUST_PROXY`, `SWAGGER_UI`, `TOTP_REQUIRED`, `OIDC_*` including `OIDC_ONLY`, `FILES_DIR`, `RUST_LOG`, …), for infrastructure needed before the DB opens: database, data dir, public URL, bind address, log level, trusted proxy settings.
+- **Environment variables**, unprefixed like Potoo's and Woodmouse's (`PORT`, `PUBLIC_URL`, `DATABASE_URL`, `DATA_DIR`, `TRUST_PROXY`, `SWAGGER_UI`, `TOTP_REQUIRED`, `OIDC_*` including `OIDC_ONLY`, `STORAGE_URL`, `RUST_LOG`, …), for infrastructure needed before the DB opens: database, data dir, public URL, bind address, log level, trusted proxy settings.
 - `DATABASE_URL` is an sqlx SQLite URL. It **defaults to `<DATA_DIR>/organizer.db`**, and self-hosters can override it.
   - The database must be on a local disk, even when the files are on a network share: SQLite's locking and WAL are unsafe on NFS/SMB. A data dir on a share is the main reason to override it.
   - A database outside the data dir must be backed up with it (§4.1).
@@ -184,7 +184,7 @@ As in Potoo and Woodmouse:
 
 ### 4.1 Storage, identity and source of truth
 
-- Layout (`DATA_DIR` keeps only what must be local; `FILES_DIR` is the content
+- Layout (`DATA_DIR` keeps only what must be local; `STORAGE_URL` is the content
   base — a path, default `<DATA_DIR>/files`, or `s3://bucket/prefix` whose
   drives are backend drives):
   ```
@@ -194,7 +194,7 @@ As in Potoo and Woodmouse:
   ├── secret.key               # the server key (SECRET_KEY_FILE can move it)
   ├── ocm-key                  # the federation signing key (OCM_KEY_FILE can move it)
   └── backups/                 # rustic work dir: cache and the db staging copy
-  <FILES_DIR>/
+  <STORAGE_URL>/
   ├── uploads/                 # in-progress resumable uploads (local scratch)
   ├── inbox/<user-id>/         # drop box staging (local scratch)
   ├── users/<user-id>/files/   # the user's real tree, by default (see "Existing folders")
@@ -205,7 +205,7 @@ As in Potoo and Woodmouse:
 - SQLite holds: users, tokens, file index (ID, path, size, mtime, hash, mime), drop box items, placement proposals and undo log, journal, settings, job queue, sync change log, FTS5 and vector tables.
 - **Existing folders**: a user's tree can be a directory that already exists, such as a NAS share mounted into the container. Organizer indexes it in place and does not copy it.
   - `users/<user-id>/files/` is only the default.
-  - Organizer's own scratch (inbox, uploads) stays under the local base (`FILES_DIR` when a path, else `DATA_DIR`) and is never created inside the user's tree; trash and versions live inside each tree.
+  - Organizer's own scratch (inbox, uploads) stays under the local base (`STORAGE_URL` when a path, else `DATA_DIR`) and is never created inside the user's tree; trash and versions live inside each tree.
   - The first index of a large tree runs in the background, hashing throttled as in §4.2.
 - **Backups contain data only**:
   - The files (tree, versions, trash), the database (users, credentials, API keys, settings, drop box items, proposals, the undo log and corrections) and the key files (`secret.key`, `ocm-key`).

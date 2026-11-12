@@ -231,7 +231,7 @@ pub async fn sources(
     let data_dir = state.files.data_dir().to_path_buf();
     let local_base = state.files.local_base().to_path_buf();
     let real = |p: &Path| std::fs::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
-    // Each user's files folder; those under FILES_DIR come with it.
+    // Each user's files folder; those under STORAGE_URL come with it.
     let roots: Vec<(Uuid, Option<String>)> = sqlx::query_as("SELECT id, files_root FROM users")
         .fetch_all(state.db.reader())
         .await?;
@@ -253,7 +253,7 @@ pub async fn sources(
     if users_dir.is_dir() {
         sources.push(users_dir.clone());
     }
-    // The shared drives on the server's storage: under FILES_DIR, or each
+    // The shared drives on the server's storage: under STORAGE_URL, or each
     // in the folder chosen for it (its trash and versions inside). Drives
     // in a storage backend are not backed up by the server
     // (docs/M7C_DESIGN.md §5): the provider's versioning is the way.

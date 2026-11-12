@@ -15,25 +15,17 @@ files on disk.
 
 ## Running it
 
-The image is not published yet. To build and run it from a checkout (see
-[CONTRIBUTING.md](CONTRIBUTING.md) for the tools):
-
-```sh
-mise run build:docker
-podman run -d --name organizer -p 8000:8000 -v organizer-data:/data organizer
-```
-
-Or with a compose file, `compose.yaml`:
+With a compose file, `compose.yaml`:
 
 ```yaml
 services:
   organizer:
-    image: organizer # built above, with `mise run build:docker`
+    image: ghcr.io/lmxrd/bowerbird:latest
     ports:
       - "8000:8000" # to the reverse proxy only, when there is one
     volumes:
-      - organizer-data:/data
-      # - /mnt/big-disk/files:/files # FILES_DIR on a bigger disk
+      - organizer_data:/data
+      # - /mnt/big-disk/files:/files # STORAGE_URL on a bigger disk
     environment:
       # HTTPS is the reverse proxy's job (Caddy, Traefik, nginx, ...):
       # Organizer speaks plain HTTP. Behind one, set these two —
@@ -44,14 +36,18 @@ services:
       # TRUST_PROXY lets the proxy's X-Forwarded-For stand for the
       # client's address (the rate limits use it):
       # TRUST_PROXY: "true"
-      # FILES_DIR: the base of all file content (every user's tree, the
-      # shared drives, uploads, the drop box) — a path, or
-      # s3://bucket/prefix with FILES_S3_* for the credentials. Default:
-      # /data/files. Mount a bigger disk here when it is a path:
-      # FILES_DIR: /files
-      # FILES_S3_ENDPOINT: https://s3.example.com   # when FILES_DIR is s3://
+      # STORAGE_URL: the base of all file content (every user's tree, the
+      # shared drives, uploads, the drop box) — a path (default /data/files),
+      # or s3://endpoint/bucket/prefix, with the credentials in
+      # STORAGE_ACCESS_KEY / STORAGE_SECRET_KEY (STORAGE_REGION if not
+      # us-east-1):
+      # STORAGE_URL: /files
+      # STORAGE_URL: s3://s3.example.com/organizer-files
+      # STORAGE_ACCESS_KEY: ${S3_ACCESS_KEY}
+      # STORAGE_SECRET_KEY: ${S3_SECRET_KEY}
 volumes:
-  organizer-data:
+  organizer_data:
+  # organizer_files:
 ```
 
 ```sh
@@ -69,7 +65,7 @@ Everything else will be set in the app.
 | -------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `PORT`         | `8000`                     | The port the server listens on                                                                                                       |
 | `DATA_DIR`     | `data` (`/data` in the image) | Organizer's own files: the database, the drop box, uploads, caches, shared drives                                                  |
-| `FILES_DIR`    | `<DATA_DIR>/files`         | The base of the file content: every user's files tree, the shared drives, the in-progress uploads and the drop box. A folder path (mount it, e.g. a bigger disk), or `s3://bucket/prefix` with `FILES_S3_ENDPOINT`, `FILES_S3_REGION`, `FILES_S3_ACCESS_KEY`, `FILES_S3_SECRET_KEY`: then new drives are made in the bucket. `DATA_DIR` itself keeps only the database, the embeddings, the key files and the backup work dir |
+| `STORAGE_URL`    | `<DATA_DIR>/files`         | The base of the file content: every user's files tree, the shared drives, the in-progress uploads and the drop box. A folder path (mount it, e.g. a bigger disk), or `s3://endpoint/bucket/prefix` with `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` (`STORAGE_REGION` if not us-east-1): then new drives are made in the bucket. `DATA_DIR` itself keeps only the database, the embeddings, the key files and the backup work dir |
 | `DATABASE_URL` | `sqlite:<DATA_DIR>/organizer.db` | The database (SQLite only for now). It must be on a local disk, not on an NFS or SMB share. Back it up with the data dir if you move it |
 | `VECTOR_DATABASE_URL` | `turso:<DATA_DIR>/vectors.db` | Where the embeddings are kept (only with an embeddings model). The scheme names the engine; Turso (`turso:<path>`) is the only one so far. They are made again from your files, so they need no backup |
 | `PUBLIC_URL`   | —                          | Where Organizer is reached from, e.g. `https://files.example.com`. Passkeys need it: a passkey belongs to its host |
@@ -130,7 +126,7 @@ and optionally as a superadmin) works once, for 7 days; Organizer sends no
 email, you send the link. Open sign-up and single sign-on making accounts
 are two switches there (`SIGNUP_OPEN`, `OIDC_CREATE_USERS`). Each user has
 their own drop box and their **My drive**, their own files in their files
-folder: by default `<FILES_DIR>/users/<id>/files`, or an existing folder the
+folder: by default `<STORAGE_URL>/users/<id>/files`, or an existing folder the
 superadmin sets. A superadmin can make or remove superadmins, set a storage limit (writes
 through Organizer past it are refused; the trash and versions count, and
 changes made directly in a files folder are counted, not stopped), disable
@@ -203,7 +199,7 @@ instead).
 
 Each drive keeps its trash and versions in a hidden `.organizer` folder at
 its root (on a server from before drives they are moved there from
-`<FILES_DIR>/users/<id>/` at the first start). It is never listed, synced,
+`<STORAGE_URL>/users/<id>/` at the first start). It is never listed, synced,
 searched or shown over WebDAV, and no file or folder at a drive's root may
 take that name.
 

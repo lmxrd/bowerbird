@@ -23,7 +23,7 @@ pub mod shares;
 pub mod versions;
 mod watch;
 
-use crate::config::FilesDir;
+use crate::config::StorageUrl;
 use crate::db::Db;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -255,11 +255,11 @@ pub struct Files {
     /// One lock per upload in progress: its requests take turns.
     pub(crate) upload_locks: Mutex<HashMap<Uuid, Arc<tokio::sync::Mutex<()>>>>,
     data_dir: PathBuf,
-    /// `FILES_DIR`: the base of the file content — a local path (default
+    /// `STORAGE_URL`: the base of the file content — a local path (default
     /// `<DATA_DIR>/files`), or an `s3://` URL whose drives live in the
     /// bucket. Scratch (uploads, the drop box) is always local: under
-    /// `FILES_DIR` when it is a path, under the data dir when it is S3.
-    files_dir: FilesDir,
+    /// `STORAGE_URL` when it is a path, under the data dir when it is S3.
+    storage_url: StorageUrl,
     trees: Mutex<HashMap<Uuid, Arc<Tree>>>,
     /// Watch the trees and scan them on a timer: off in the tests, which
     /// scan when they want to.
@@ -303,16 +303,16 @@ impl Topic {
 }
 
 impl Files {
-    pub fn new(db: Db, data_dir: PathBuf, files_dir: FilesDir) -> Arc<Self> {
-        Self::make(db, data_dir, files_dir, false)
+    pub fn new(db: Db, data_dir: PathBuf, storage_url: StorageUrl) -> Arc<Self> {
+        Self::make(db, data_dir, storage_url, false)
     }
 
     /// The service the server runs: trees are watched and rescanned.
-    pub fn with_background(db: Db, data_dir: PathBuf, files_dir: FilesDir) -> Arc<Self> {
-        Self::make(db, data_dir, files_dir, true)
+    pub fn with_background(db: Db, data_dir: PathBuf, storage_url: StorageUrl) -> Arc<Self> {
+        Self::make(db, data_dir, storage_url, true)
     }
 
-    fn make(db: Db, data_dir: PathBuf, files_dir: FilesDir, background: bool) -> Arc<Self> {
+    fn make(db: Db, data_dir: PathBuf, storage_url: StorageUrl, background: bool) -> Arc<Self> {
         Arc::new(Files {
             backends: Arc::new(crate::backends::Backends::new(db.clone(), data_dir.clone())),
             federation: Arc::new(crate::federation::Federation::new(
@@ -322,7 +322,7 @@ impl Files {
             db,
             upload_locks: Mutex::new(HashMap::new()),
             data_dir,
-            files_dir,
+            storage_url,
             trees: Mutex::new(HashMap::new()),
             background,
             events: tokio::sync::broadcast::channel(64).0,
@@ -420,22 +420,22 @@ impl Files {
         &self.data_dir
     }
 
-    /// `FILES_DIR`: the base of the file content.
-    pub fn files_dir(&self) -> &FilesDir {
-        &self.files_dir
+    /// `STORAGE_URL`: the base of the file content.
+    pub fn storage_url(&self) -> &StorageUrl {
+        &self.storage_url
     }
 
-    /// The local base: `FILES_DIR` when it is a path, else the data dir
+    /// The local base: `STORAGE_URL` when it is a path, else the data dir
     /// (trees are in the bucket then; this is only for the scratch).
     pub fn local_base(&self) -> &Path {
-        match &self.files_dir {
-            FilesDir::Local(path) => path,
-            FilesDir::S3 { .. } => &self.data_dir,
+        match &self.storage_url {
+            StorageUrl::Local(path) => path,
+            StorageUrl::S3 { .. } => &self.data_dir,
         }
     }
 
     /// Where a user's tree is: the root chosen in the settings, else the
-    /// default under `FILES_DIR`.
+    /// default under `STORAGE_URL`.
     pub fn root_for(&self, user_id: Uuid, stored: &StoredRoot) -> PathBuf {
         match &stored.files_root {
             Some(root) => PathBuf::from(root),
@@ -443,7 +443,7 @@ impl Files {
         }
     }
 
-    /// The default files root, under `FILES_DIR`.
+    /// The default files root, under `STORAGE_URL`.
     pub fn default_root(&self, user_id: Uuid) -> PathBuf {
         self.user_dir(user_id).join("files")
     }
@@ -875,7 +875,7 @@ impl Files {
 /// What a user's row says of where their tree is.
 #[derive(Clone, Debug, Default, sqlx::FromRow)]
 pub struct StoredRoot {
-    /// The folder a superadmin chose; NULL: the default under `FILES_DIR`.
+    /// The folder a superadmin chose; NULL: the default under `STORAGE_URL`.
     pub files_root: Option<String>,
 }
 

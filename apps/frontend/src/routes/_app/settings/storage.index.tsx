@@ -174,7 +174,7 @@ function FilesFolderCard() {
               value={path}
               onChange={(e) => setPath(e.target.value)}
             />
-            <FieldDescription>Empty for the default, under FILES_DIR.</FieldDescription>
+            <FieldDescription>Empty for the default, under STORAGE_URL.</FieldDescription>
             {save.isError && <FieldError>{errorMessage(save.error)}</FieldError>}
           </Field>
           <p

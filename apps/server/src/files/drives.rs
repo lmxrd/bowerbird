@@ -171,7 +171,7 @@ impl Files {
     ) -> Result<Uuid, FileError> {
         let name = clean_name(name)?;
         let id = Uuid::now_v7();
-        // An s3:// FILES_DIR: drives are made in the bucket by default,
+        // An s3:// STORAGE_URL: drives are made in the bucket by default,
         // unless a folder on the server is chosen for this one.
         let backend = match backend {
             Some(backend) => Some(backend),

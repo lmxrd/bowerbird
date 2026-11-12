@@ -32,7 +32,7 @@ async fn setup() -> Setup {
     let files = Files::new(
         db,
         data_dir.clone(),
-        crate::config::files_dir(&data_dir).unwrap(),
+        crate::config::storage_url(&data_dir).unwrap(),
     );
     let root = files.default_root(user);
     fs::create_dir_all(&root).unwrap();
@@ -500,14 +500,14 @@ async fn a_new_files_root_is_indexed_from_scratch() {
 }
 
 #[tokio::test]
-async fn files_dir_is_the_base_of_the_roots_and_the_scratch() {
+async fn storage_url_is_the_base_of_the_roots_and_the_scratch() {
     let s = setup().await;
     let base = s.dir.join("base");
     fs::create_dir_all(&base).unwrap();
     let files = Files::new(
         s.files.db().clone(),
         s.files.data_dir().to_path_buf(),
-        crate::config::FilesDir::Local(base.clone()),
+        crate::config::StorageUrl::Local(base.clone()),
     );
     // The default root is under the base, a chosen one is used as given.
     let stored = crate::files::StoredRoot { files_root: None };
