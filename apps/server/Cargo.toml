@@ -18,15 +18,15 @@ axum-extra = { version = "0.12.6", features = ["cookie", "cookie-signed"] }
 axum-login = "0.18.0"
 blake3 = "1.8.7"
 bytes = "1.12.1"
-dav-server = { version = "0.11.0", default-features = false, features = ["localfs"] }
+dav-server = { version = "0.12.0", default-features = false, features = ["localfs"] }
 ed25519-dalek = "=3.0.0"
 futures-core = "0.3.31"
 genai = { version = "0.7.3", default-features = false }
 globset = "0.4.21"
 governor = "0.10.4"
 hex = "0.4.3"
-httpsig = "=0.0.26"
-jiff = "0.2.39"
+httpsig = "=0.0.27"
+jiff = "1.0.1"
 lol_html = "3.0.3"
 mime_guess = "2.0.5"
 notify = "8.2.1"
@@ -43,8 +43,8 @@ reqwest = { version = "0.13.5", default-features = false, features = ["http2", "
 rust-embed = "8.13.0"
 # Backups (src/backup): the library under the rustic command, restic-format
 # repositories. The opendal backend only: a local path or S3.
-rustic_backend = { version = "0.7.0", default-features = false, features = ["opendal"] }
-rustic_core = "0.13.0"
+rustic_backend = { version = "0.8.0", default-features = false, features = ["opendal"] }
+rustic_core = "0.14.0"
 # TLS for reqwest (the provider's endpoints) with ring, which builds for
 # musl; installed as the process default in lib.rs.
 rustls = { version = "0.23.45", default-features = false, features = ["ring", "std", "tls12"] }
